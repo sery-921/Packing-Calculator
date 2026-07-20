@@ -54,10 +54,10 @@
         <span><strong>自动推荐通用箱型</strong><small>Seeed 纸箱库；按珍珠棉偏好、利用率和人体工学筛选</small></span>
         <input id="autoMode" type="checkbox" checked>
       </label>
-      <label class="field">珍珠棉偏好
+      <label class="field foam-preference-field">珍珠棉偏好
         <select id="foamPreference">
           <option value="paired">只看配套棉</option>
-          <option value="all" selected>配套和无配套都推荐</option>
+          <option value="all" selected>配套与不配套都推荐（可点击下拉）</option>
           <option value="unpaired">只看无配套棉</option>
         </select>
       </label>
@@ -144,9 +144,9 @@
       <article class="panel">
         <div class="section-title"><span>08</span><h2>导出</h2></div>
         <div class="download-grid">
+          <a data-download="pdf" href="#" aria-disabled="true">PDF</a>
           <a data-download="json" href="#" aria-disabled="true">JSON</a>
           <a data-download="report" href="#" aria-disabled="true">报告</a>
-          <a data-download="pdf" href="#" aria-disabled="true">PDF</a>
           <a data-download="svg" href="#" aria-disabled="true">SVG</a>
           <a data-download="dxf" href="#" aria-disabled="true">DXF 图纸</a>
         </div>
