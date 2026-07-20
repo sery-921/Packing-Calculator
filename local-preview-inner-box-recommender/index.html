@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#17324d">
+  <title>包装装箱优化器</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="style.css?v=5">
+</head>
+<body>
+  <header>
+    <p class="eyebrow">PACKAGING GRID LAB</p>
+    <h1>包装装箱优化器</h1>
+    <p>输入尺寸，得到可复核的多方案对比、六面珍珠棉、人体工学校核与 DXF/PDF 图纸。</p>
+  </header>
+
+  <main>
+    <section class="panel inner-recommender-panel" id="innerRecommender">
+      <div class="section-title"><span>00</span><h2>通用内盒推荐</h2></div>
+      <p class="feature-lead">先输入产品尺寸，点击“推荐通用内盒”；匹配到可用内盒后，点击“使用此内盒”，即可一键带入下方内盒数据。</p>
+      <div class="inner-recommender-grid">
+        <div>
+          <div class="dimension-grid">
+            <label>产品长 L<input id="productL" type="number" min="0" step="0.1" value="180"><em>mm</em></label>
+            <label>产品宽 W<input id="productW" type="number" min="0" step="0.1" value="120"><em>mm</em></label>
+            <label>产品高 H<input id="productH" type="number" min="0" step="0.1" value="50"><em>mm</em></label>
+          </div>
+          <div class="dimension-grid compact inner-recommender-options">
+            <label>每侧缓冲<input id="productBuffer" type="number" min="0" step="0.5" value="2"><em>mm</em></label>
+          </div>
+          <p class="hint">匹配尺寸 = 产品尺寸 + 两侧缓冲；内盒内尺寸按外尺寸、材质厚度和 SKU 扣减系数估算。</p>
+        </div>
+        <div class="inner-rules-column">
+          <aside class="inner-rules-card">
+          <strong>当前预览规则</strong>
+          <p>K6K 单板 3 mm；K3K / K3KE 坑单板 2 mm。</p>
+          <p>默认扣减系数：长 ×10、宽 ×3、高 ×2；每个 SKU 可单独覆盖。</p>
+          <p>A 级优先：长宽余量 ≤12 mm、高度余量 ≤8 mm；大余量会标记为需填充。</p>
+          </aside>
+          <div class="inner-rules-actions">
+            <label class="switch-row inline-switch"><span><strong>允许长宽旋转</strong><small>比较 0° / 90° 两种底面方向</small></span><input id="productRotate" type="checkbox" checked></label>
+            <button id="recommendInnerBox" class="secondary">推荐通用内盒</button>
+          </div>
+        </div>
+      </div>
+      <p id="innerMatchStatus" class="inner-match-status">输入产品尺寸后点击“推荐通用内盒”。</p>
+      <div id="innerMatchResults" class="inner-match-results"></div>
+    </section>
+
+    <section class="panel form-panel">
+      <div class="section-title"><span>01</span><h2>箱型</h2></div>
+      <label class="switch-row">
+        <span><strong>自动推荐通用箱型</strong><small>Seeed 纸箱库；按珍珠棉偏好、利用率和人体工学筛选</small></span>
+        <input id="autoMode" type="checkbox" checked>
+      </label>
+      <label class="field foam-preference-field">珍珠棉偏好
+        <select id="foamPreference">
+          <option value="paired">只看配套棉</option>
+          <option value="all" selected>配套与不配套都推荐（可点击下拉）</option>
+          <option value="unpaired">只看无配套棉</option>
+        </select>
+      </label>
+      <div id="cartonFields">
+        <div class="segmented">
+          <label><input type="radio" name="dimensionType" value="inner" checked><span>内尺寸</span></label>
+          <label><input type="radio" name="dimensionType" value="outer"><span>外尺寸</span></label>
+        </div>
+        <div class="dimension-grid">
+          <label>长 L<input id="cartonL" type="number" min="0" step="0.1" value="584"><em>mm</em></label>
+          <label>宽 W<input id="cartonW" type="number" min="0" step="0.1" value="384"><em>mm</em></label>
+          <label>高 H<input id="cartonH" type="number" min="0" step="0.1" value="384"><em>mm</em></label>
+        </div>
+        <label class="field">楞型
+          <select id="flute"><option>E</option><option>B</option><option>C</option><option>A</option><option>AB</option><option>BE</option><option selected>BC</option><option>AAA</option></select>
+        </label>
+      </div>
+
+      <div class="section-title"><span>02</span><h2>销售内盒</h2></div>
+      <div class="dimension-grid">
+        <label>长 l<input id="innerL" type="number" min="0" step="0.1" value="200"><em>mm</em></label>
+        <label>宽 w<input id="innerW" type="number" min="0" step="0.1" value="150"><em>mm</em></label>
+        <label>高 h<input id="innerH" type="number" min="0" step="0.1" value="100"><em>mm</em></label>
+      </div>
+      <div id="innerBoxGuide" class="box-dimension-guide" aria-label="销售内盒长宽高图解"></div>
+      <label class="field">单盒重量<input id="innerWeight" type="number" min="0" step="0.01" value="0.25"><em>kg</em></label>
+
+      <div class="section-title"><span>03</span><h2>规则</h2></div>
+      <div class="option-grid">
+        <label class="switch-row"><span><strong>长宽混排平放</strong><small>同一外箱内允许 0°/90° 底面混排</small></span><input id="mixedOrientationFlat" type="checkbox" checked></label>
+        <label class="switch-row"><span><strong>保持直立</strong><small>仅底面长宽互换</small></span><input id="upright" type="checkbox" checked></label>
+        <label class="switch-row"><span><strong>按余量估算填充棉</strong><small>将剩余空间分到相对两面</small></span><input id="foamEnabled" type="checkbox" checked></label>
+        <label class="switch-row"><span><strong>严格人体工学</strong><small>开启后超三边和/限重的箱型不列入</small></span><input id="strictErgonomics" type="checkbox"></label>
+        <label class="switch-row"><span><strong>允许满装优先</strong><small>能完整放入时不因总公差少装一层</small></span><input id="allowFullFit" type="checkbox" checked></label>
+      </div>
+      <div class="dimension-grid compact">
+        <label>总公差<input id="clearance" type="number" min="0" step="0.1" value="1"><em>mm</em></label>
+        <label>棉片厚<input id="foamThickness" type="number" min="0.1" step="0.1" value="10"><em>mm</em></label>
+        <label>限重<input id="maxWeight" type="number" min="0" step="0.1" value="20"><em>kg</em></label>
+      </div>
+      <div class="dimension-grid compact">
+        <label>纸箱成本<input id="cartonCost" type="number" min="0" step="0.01" value="0"><em>/箱</em></label>
+        <label>棉片成本<input id="foamCost" type="number" min="0" step="0.01" value="0"><em>/片</em></label>
+        <label>处理成本<input id="handlingCost" type="number" min="0" step="0.01" value="0"><em>/箱</em></label>
+      </div>
+      <button id="calculate" class="primary">计算装箱方案</button>
+      <p id="error" class="error" role="alert"></p>
+    </section>
+
+    <section id="results" class="results" hidden>
+      <article class="hero-result">
+        <div><span class="kicker">最优排列</span><strong id="countGrid">—</strong><small id="orientationText">—</small></div>
+        <div class="quantity"><strong id="quantity">—</strong><span>个 / 箱</span></div>
+      </article>
+      <div class="metric-grid">
+        <article><span>空间利用率</span><strong id="utilization">—</strong></article>
+        <article><span>估算总重</span><strong id="totalWeight">—</strong></article>
+        <article><span>珍珠棉</span><strong id="foamTotal">—</strong></article>
+      </div>
+      <article class="panel preview-panel">
+        <div class="section-title"><span>04</span><h2>工程预览</h2></div>
+        <div id="preview"></div>
+      </article>
+      <article class="panel">
+        <div class="section-title"><span>05</span><h2>六面余量</h2></div>
+        <div id="paddingTable" class="padding-table"></div>
+      </article>
+      <article class="panel">
+        <div class="section-title"><span>06</span><h2>方案对比</h2></div>
+        <div id="planList" class="plan-list"></div>
+        <button id="planDisclosure" class="list-disclosure" type="button" aria-expanded="false" hidden>
+          <span>展开其余方案</span><i class="disclosure-arrow" aria-hidden="true"></i>
+        </button>
+        <p class="hint">推荐方案用于排序参考；最终量产方案仍由人工确认。</p>
+      </article>
+      <article class="panel pdf-preview-panel">
+        <button id="pdfPreviewToggle" class="section-title section-toggle" type="button" aria-expanded="false" aria-controls="pdfPreviewBody">
+          <span>07</span><h2>PDF预览</h2><span class="disclosure-label">展开</span><i class="disclosure-arrow" aria-hidden="true"></i>
+        </button>
+        <div id="pdfPreviewBody" hidden>
+          <canvas id="pdfPreviewCanvas" width="1240" height="1754"></canvas>
+        </div>
+      </article>
+      <article class="panel">
+        <div class="section-title"><span>08</span><h2>导出</h2></div>
+        <div class="download-grid">
+          <a data-download="pdf" href="#" aria-disabled="true">PDF</a>
+          <a data-download="json" href="#" aria-disabled="true">JSON</a>
+          <a data-download="report" href="#" aria-disabled="true">报告</a>
+          <a data-download="svg" href="#" aria-disabled="true">SVG</a>
+          <a data-download="dxf" href="#" aria-disabled="true">DXF 图纸</a>
+        </div>
+        <p id="exportStatus" class="export-status" role="status">计算完成后即可导出文件。</p>
+        <p class="hint">DXF 可用中望 CAD 打开；PDF 与 DXF 图纸内容对应，写明纸箱、内盒和珍珠棉用量。</p>
+      </article>
+    </section>
+  </main>
+  <footer>Grid optimizer · deterministic geometry · offline ready</footer>
+  <script src="common-cartons.js"></script>
+  <script src="epe-foam-skus.js"></script>
+  <script src="epe-foam-face-maps.js"></script>
+  <script src="common-inner-boxes.js?v=2"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./vendor/three/three.module.js",
+      "three/addons/": "./vendor/three/"
+    }
+  }
+  </script>
+  <script type="module" src="preview3d.js?v=5"></script>
+  <script src="mixed-packing.js?v=1"></script>
+  <script src="app.js?v=9"></script>
+  <script src="inner-box-recommender.js?v=4"></script>
+</body>
+</html>
