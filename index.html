@@ -91,11 +91,11 @@
       <div class="option-grid">
         <label class="switch-row mixed-rule-switch"><span><strong>高级优化：平放混排优化</strong><small>允许同一外箱内 0°/90° 方向组合排列，用于探索更高装载率方案</small></span><input id="mixedOrientationFlat" type="checkbox"></label>
         <p class="mixed-rule-note">默认关闭。开启后会增加混排候选。</p>
-        <label class="switch-row"><span><strong>保持直立</strong><small>仅底面长宽互换</small></span><input id="upright" type="checkbox" checked></label>
-        <label class="switch-row"><span><strong>按余量估算填充棉</strong><small>将剩余空间分到相对两面</small></span><input id="foamEnabled" type="checkbox" checked></label>
+        <label class="switch-row"><span><strong>高度方向固定</strong><small>只允许底面长宽旋转</small></span><input id="upright" type="checkbox" checked></label>
+        <label class="switch-row"><span><strong>按余量估算填充棉</strong><small>把装箱后剩余空隙换算成珍珠棉片数，并分到六个面。</small></span><input id="foamEnabled" type="checkbox" checked></label>
         <label class="switch-row"><span><strong>六面必须都有泡棉</strong><small>开启后可通过少装一定数量的内盒换取六面都有缓冲</small></span><input id="sixFaceFoamRequired" type="checkbox"></label>
-        <label class="switch-row"><span><strong>严格人体工学</strong><small>开启后超三边和/限重的箱型不列入</small></span><input id="strictErgonomics" type="checkbox"></label>
-        <label class="switch-row"><span><strong>允许满装优先</strong><small>能完整放入时不因总公差少装一层</small></span><input id="allowFullFit" type="checkbox" checked></label>
+        <label class="switch-row"><span><strong>允许满装优先</strong><small>默认每个方向会扣 1mm 保守计算；开启后，刚好能放满时仍按满装计算</small></span><input id="allowFullFit" type="checkbox" checked></label>
+        <label class="switch-row"><span><strong>严格人体工学</strong><small>自动选箱时，排除三边和超过 1200 mm、最长边超过 800 mm、总重超过所填限重的方案</small></span><input id="strictErgonomics" type="checkbox"></label>
       </div>
       <div class="dimension-grid compact">
         <label>总公差<input id="clearance" type="number" min="0" step="0.1" value="1"><em>mm</em></label>
@@ -149,9 +149,9 @@
         <div class="section-title"><span>08</span><h2>导出</h2></div>
         <div class="download-grid">
           <a data-download="pdf" href="#" aria-disabled="true">PDF</a>
+          <a data-download="excel" href="#" aria-disabled="true">Excel</a>
           <a data-download="json" href="#" aria-disabled="true">JSON</a>
           <a data-download="report" href="#" aria-disabled="true">报告</a>
-          <a data-download="svg" href="#" aria-disabled="true">SVG</a>
           <a data-download="dxf" href="#" aria-disabled="true">DXF 图纸</a>
         </div>
         <p id="exportStatus" class="export-status" role="status">计算完成后即可导出文件。</p>
@@ -175,7 +175,7 @@
   <script type="module" src="preview3d.js?v=5"></script>
   <script src="packing-evaluator.js?v=3"></script>
   <script src="mixed-packing.js?v=2"></script>
-  <script src="app.js?v=12"></script>
+  <script src="app.js?v=13"></script>
   <script src="inner-box-recommender.js?v=4"></script>
 </body>
 </html>

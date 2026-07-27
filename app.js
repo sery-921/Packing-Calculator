@@ -156,13 +156,13 @@ function layoutFor(c,box,opt){
   const uniform=layoutForUniform(c,box,opt);
   if(opt.mode!=="mixedOrientationFlat")return uniform;
   const mixed=layoutForMixed(c,box,opt,uniform);
-  if(!mixed)return uniform;
-  if(!uniform)return mixed;
   if(opt.sixFaceFoamRequired){
-    const mixedHasFoam=hasSixFaceFoam(mixed),uniformHasFoam=hasSixFaceFoam(uniform);
+    const mixedHasFoam=!!mixed&&hasSixFaceFoam(mixed),uniformHasFoam=!!uniform&&hasSixFaceFoam(uniform);
     if(mixedHasFoam!==uniformHasFoam)return mixedHasFoam?mixed:uniform;
     if(!mixedHasFoam&&!uniformHasFoam)return null;
   }
+  if(!mixed)return uniform;
+  if(!uniform)return mixed;
   const mixedScore=layoutScore(mixed,opt);
   const uniformScore=layoutScore(uniform,opt);
   return mixedScore>uniformScore?mixed:uniform;
@@ -922,6 +922,49 @@ function renderPdfPreview(data){
   if(ctx)drawPdfPage(ctx,data);
 }
 function canvasToBlob(canvas,type,quality){return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error("无法生成PDF页面")),type,quality))}
+function excelCell(value){return String(value??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+function excelBomRows(data){
+  const {carton:c,layout:l}=data.best,p=l.padding,base=l.quantity,rows=[
+    {type:"纸箱",sku:c.sku||c.code||"",name:c.name||"包装箱",size:Array.isArray(c.outer)?c.outer.join("×"):"",qty:1,base,unit:"个",note:`内尺寸 ${c.inner.join("×")} mm`}
+  ];
+  const foamRows=new Map();
+  for(const axis of PADDING_AXES){
+    const spec=foamSpec(c,axis);
+    if(!spec.code||spec.code==="-")continue;
+    const count=Number(p[axis]?.sheets)||0;
+    const existing=foamRows.get(spec.code)||{type:"珍珠棉",sku:spec.code,name:spec.face,size:spec.size,qty:0,base,unit:"片",note:[]};
+    existing.qty+=count;
+    existing.note.push(`${spec.face} ${count}片`);
+    if(existing.size==="-"&&spec.size!=="-")existing.size=spec.size;
+    foamRows.set(spec.code,existing);
+  }
+  return rows.concat([...foamRows.values()]
+    .filter(row=>row.qty>0)
+    .map(row=>({...row,note:row.note.join("；")})));
+}
+function excelTable(data){
+  const {carton:c,layout:l}=data.best,rows=excelBomRows(data),headers=["物料类型","SKU","名称/方向","规格(mm)","数量","底数","单位","备注"];
+  const summary=[
+    ["外箱",`${c.sku||"-"} ${Array.isArray(c.outer)?c.outer.join("×"):"-"} ${c.material||c.flute||""}`],
+    ["内盒尺寸",`${data.box.dims.join("×")} mm`],
+    ["装箱数量",`${l.quantity} 个/箱`],
+    ["排列方式",`${modeText(l)}；${planLayoutSummary(l)}个`],
+    ["朝向分布",orientationSummary(l)]
+  ];
+  const tr=cells=>`<tr>${cells.map(v=>`<td>${excelCell(v)}</td>`).join("")}</tr>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><style>
+    table{border-collapse:collapse;font-family:"Microsoft YaHei",Arial,sans-serif;font-size:12px}
+    th,td{border:1px solid #9fb0bf;padding:6px 8px;white-space:nowrap}
+    th{background:#17324d;color:#fff;font-weight:700}
+    .title{font-size:18px;font-weight:700;background:#e9f0f6;color:#17324d}
+  </style></head><body><table>
+    <tr><td class="title" colspan="8">包装装箱物料清单</td></tr>
+    ${summary.map(([k,v])=>`<tr><td colspan="2">${excelCell(k)}</td><td colspan="6">${excelCell(v)}</td></tr>`).join("")}
+    <tr>${headers.map(h=>`<th>${excelCell(h)}</th>`).join("")}</tr>
+    ${rows.map(row=>tr([row.type,row.sku,row.name,row.size,row.qty,row.base,row.unit,row.note])).join("")}
+  </table></body></html>`;
+}
+function excelBlob(data){return new Blob(["\ufeff",excelTable(data)],{type:"application/vnd.ms-excel;charset=utf-8"})}
 function concatBytes(parts){
   const size=parts.reduce((sum,part)=>sum+part.length,0),out=new Uint8Array(size);let offset=0;
   for(const part of parts){out.set(part,offset);offset+=part.length}
@@ -957,9 +1000,9 @@ async function prepareExports(data){
   const generation=++exportGeneration;revokeExports();
   document.querySelectorAll("[data-download]").forEach(link=>{link.href="#";link.removeAttribute("download");link.setAttribute("aria-disabled","true")});
   $("exportStatus").textContent="正在准备导出文件…";
+  setExport("excel","packaging-bom.xls",excelBlob(data));
   setExport("json","result.json",new Blob([JSON.stringify(serializable(data),null,2)],{type:"application/json;charset=utf-8"}));
   setExport("report","packaging-report.md",new Blob([report(data)],{type:"text/markdown;charset=utf-8"}));
-  setExport("svg","assembly-preview.svg",new Blob([svgPreviewV4(data)],{type:"image/svg+xml;charset=utf-8"}));
   setExport("dxf","layout-drawing.dxf",new Blob([dxf(data)],{type:"application/dxf;charset=utf-8"}));
   try{
     const pdf=await pdfBlob(data);if(generation!==exportGeneration)return;
