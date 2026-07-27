@@ -18,6 +18,7 @@ let current=null;
 let plansExpanded=false;
 let exportUrls=[];
 let exportGeneration=0;
+let preview3dRetryTimer=0;
 const $=id=>document.getElementById(id);
 const value=id=>{const n=Number($(id).value);if(!Number.isFinite(n)||n<0)throw new Error(`${$(id).closest("label")?.childNodes[0]?.textContent.trim()||id} 需要有效数字`);return n};
 const product=a=>a.reduce((x,y)=>x*y,1);
@@ -1033,6 +1034,20 @@ function buildPreviewFoams(data){
   ];
 }
 function withPreviewFoams(data){return{...data,previewFoams:buildPreviewFoams(data)}}
+function renderEngineeringPreview(previewData){
+  const mount=$("preview");
+  if(window.renderPacking3D){window.renderPacking3D(previewData,mount);return}
+  mount.classList.remove("preview-3d");
+  mount.innerHTML=svgPreviewV4(previewData);
+  clearTimeout(preview3dRetryTimer);
+  let attempts=0;
+  const retry=()=>{
+    if(!current)return;
+    if(window.renderPacking3D){window.renderPacking3D(current,mount);return}
+    if(++attempts<20)preview3dRetryTimer=setTimeout(retry,250);
+  };
+  preview3dRetryTimer=setTimeout(retry,250);
+}
 function isTrueMixedFlat(l){const d=l.orientationDistribution||{rotation0:0,rotation90:0};return l.mode==="mixedOrientationFlat"&&Number(d.rotation0)>0&&Number(d.rotation90)>0}
 function modeText(l){return isTrueMixedFlat(l)?"平放混排":"统一朝向平放"}
 function orientationSummary(l){const d=l.orientationDistribution||{rotation0:0,rotation90:0};return `0° ${d.rotation0} / 90° ${d.rotation90}`}
@@ -1076,7 +1091,7 @@ function render(data,resetPlanDisclosure=false){
   $("utilization").textContent=`${(l.utilization*100).toFixed(2)}%`;
   $("totalWeight").textContent=`${l.totalWeight.toFixed(2)} kg${previewData.best.ergonomics&&!previewData.best.ergonomics.passed?" · 超建议":""}`;
   $("foamTotal").textContent=`${l.foamTotal} 片`;
-  if(window.renderPacking3D){window.renderPacking3D(previewData,$("preview"))}else{$("preview").classList.remove("preview-3d");$("preview").innerHTML=svgPreviewV4(previewData)}
+  renderEngineeringPreview(previewData);
   renderPdfPreview(previewData);
   $("paddingTable").innerHTML=[["长方向",p.length,"左","右",codeText(c,"length")],["宽方向",p.width,"前","后",codeText(c,"width")],["高方向",p.height,"下","上",codeText(c,"height")],[paddingModeAxis(l),null,"","",paddingPackingSummary(l)]].map(([axis,x,a,b,code])=>x?`<div class="padding-row"><strong>${axis}</strong><span>余量 ${x.margin}mm · ${a}${x.low}片 / ${b}${x.high}片 ${code}</span><em>未填 ${x.unfilled}mm</em></div>`:`<div class="padding-row"><strong>${axis}</strong><span>${code}</span><em>${modeText(l)}</em></div>`).join("");
   renderPlanList(previewData,selectedKey);
@@ -1088,6 +1103,7 @@ $("autoMode").addEventListener("change",()=>$("cartonFields").hidden=$("autoMode
 $("calculate").addEventListener("click",()=>{try{$("error").textContent="";render(collect(),true)}catch(e){$("error").textContent=e.message}});
 $("calculate").addEventListener("click",()=>{if(current&&!$("error").textContent)prepareExports(current)});
 $("planDisclosure").addEventListener("click",()=>{plansExpanded=!plansExpanded;if(current)renderPlanList(current,planKey(current.best))});
+window.addEventListener("packing3d-ready",()=>{if(current)renderEngineeringPreview(current)});
 $("pdfPreviewToggle").addEventListener("click",()=>{
   const expanded=$("pdfPreviewToggle").getAttribute("aria-expanded")==="true";
   $("pdfPreviewToggle").setAttribute("aria-expanded",String(!expanded));

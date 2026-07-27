@@ -598,4 +598,5 @@ export function update(params) {
 }
 
 window.renderPacking3D = renderPacking3D;
+window.dispatchEvent(new Event("packing3d-ready"));
 window.updatePacking3DPreview = update;
