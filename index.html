@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#17324d">
   <title>包装装箱优化器</title>
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="style.css?v=5">
+  <link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
   <header>
@@ -139,7 +139,7 @@
       </article>
       <article class="panel pdf-preview-panel">
         <button id="pdfPreviewToggle" class="section-title section-toggle" type="button" aria-expanded="false" aria-controls="pdfPreviewBody">
-          <span>07</span><h2>PDF预览</h2><span class="disclosure-label">展开</span><i class="disclosure-arrow" aria-hidden="true"></i>
+          <span>07</span><div class="section-heading"><h2>PDF预览</h2><small>点击可展开预览 PDF，后续可在08模块导出</small></div><span class="disclosure-label">展开</span><i class="disclosure-arrow" aria-hidden="true"></i>
         </button>
         <div id="pdfPreviewBody" hidden>
           <canvas id="pdfPreviewCanvas" width="1240" height="1754"></canvas>
@@ -155,7 +155,7 @@
           <a data-download="dxf" href="#" aria-disabled="true">DXF 图纸</a>
         </div>
         <p id="exportStatus" class="export-status" role="status">计算完成后即可导出文件。</p>
-        <p class="hint">DXF 可用中望 CAD 打开；PDF 与 DXF 图纸内容对应，写明纸箱、内盒和珍珠棉用量。</p>
+        <p class="hint">Excel为装箱物料清单；DXF 可用中望 CAD 打开；PDF 与 DXF 图纸内容对应，写明纸箱、内盒和珍珠棉用量；报告为md格式。</p>
       </article>
     </section>
   </main>
@@ -175,7 +175,7 @@
   <script type="module" src="preview3d.js?v=6"></script>
   <script src="packing-evaluator.js?v=3"></script>
   <script src="mixed-packing.js?v=2"></script>
-  <script src="app.js?v=14"></script>
-  <script src="inner-box-recommender.js?v=4"></script>
+  <script src="app.js?v=15"></script>
+  <script src="inner-box-recommender.js?v=5"></script>
 </body>
 </html>

@@ -90,10 +90,21 @@
 
   function apply(item) {
     const [l, w, h] = item.record.outer;
+    window.applyingCommonInnerBox = true;
+    window.selectedCommonInnerBox = {
+      sku: item.record.sku || "",
+      code: item.record.code || "",
+      name: item.record.name || "通用飞机盒",
+      outer: item.record.outer.map(Number),
+      material: item.record.material || "",
+      logo: item.record.logo || "",
+      note: item.record.note || ""
+    };
     $("innerL").value = l;
     $("innerW").value = w;
     $("innerH").value = h;
     ["innerL", "innerW", "innerH"].forEach(id => $(id)?.dispatchEvent(new Event("input", { bubbles: true })));
+    window.applyingCommonInnerBox = false;
     const status = $("innerMatchStatus");
     status.textContent = `${item.record.code || item.record.sku} 已带入销售内盒外尺寸：${l} × ${w} × ${h} mm；估算内尺寸 ${item.inner.join(" × ")} mm。`;
     status.className = "inner-match-status success";

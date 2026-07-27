@@ -924,10 +924,17 @@ function renderPdfPreview(data){
 }
 function canvasToBlob(canvas,type,quality){return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error("无法生成PDF页面")),type,quality))}
 function excelCell(value){return String(value??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+function selectedColorBoxRow(){
+  const box=window.selectedCommonInnerBox;
+  if(!box||!Array.isArray(box.outer))return null;
+  return{type:"彩盒",sku:box.sku||box.code||"",name:box.name||"通用飞机盒",size:box.outer.join("×"),qty:1,base:1,unit:"个",note:[box.code&&box.code!=="*" ? `编码 ${box.code}`:"",box.material?`材质 ${box.material}`:"",box.logo,box.note].filter(Boolean).join("；")};
+}
 function excelBomRows(data){
   const {carton:c,layout:l}=data.best,p=l.padding,base=l.quantity,rows=[
     {type:"纸箱",sku:c.sku||c.code||"",name:c.name||"包装箱",size:Array.isArray(c.outer)?c.outer.join("×"):"",qty:1,base,unit:"个",note:`内尺寸 ${c.inner.join("×")} mm`}
   ];
+  const colorBox=selectedColorBoxRow();
+  if(colorBox)rows.unshift(colorBox);
   const foamRows=new Map();
   for(const axis of PADDING_AXES){
     const spec=foamSpec(c,axis);
@@ -1097,7 +1104,10 @@ function render(data,resetPlanDisclosure=false){
   renderPlanList(previewData,selectedKey);
   $("results").scrollIntoView({behavior:"smooth",block:"start"});
 }
-["innerL","innerW","innerH"].forEach(id=>$(id).addEventListener("input",renderInnerBoxGuide));
+["innerL","innerW","innerH"].forEach(id=>$(id).addEventListener("input",event=>{
+  renderInnerBoxGuide();
+  if(event.isTrusted&&!window.applyingCommonInnerBox)window.selectedCommonInnerBox=null;
+}));
 $("cartonFields").hidden=$("autoMode").checked;
 $("autoMode").addEventListener("change",()=>$("cartonFields").hidden=$("autoMode").checked);
 $("calculate").addEventListener("click",()=>{try{$("error").textContent="";render(collect(),true)}catch(e){$("error").textContent=e.message}});
