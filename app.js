@@ -28,6 +28,9 @@ const BE_DOUBLE_WALL_CARTON_RULE={wall:5,axisOffsets:[10,10,20]};
 const K6K_CARTON_RULE={wall:3,axisOffsets:[6,6,12]};
 const K3K_CARTON_RULE={wall:2,axisOffsets:[4,4,8]};
 const FOAM_MIN_COMPRESSED_MM=7;
+const FOAM_FRIENDLY_MAX_STEP_RATIO=2;
+const FOAM_CLOSURE_BONUS=600000;
+const PADDING_AXES=["length","width","height"];
 
 function boardRule(raw,flute){
   const material=String(raw.material||raw.name||"").toUpperCase();
@@ -87,23 +90,58 @@ function finishLayout(c,box,opt,item){
   const pkgCost=opt.cartonCost+foamTotal*opt.foamCost+opt.handlingCost;
   return{...item,padding,foamTotal,utilization:item.quantity*product(box.dims)/product(c.inner),totalWeight:item.quantity*box.weight+c.weight,cost:{packagingCost:pkgCost,costPerBox:item.quantity?pkgCost/item.quantity:0}};
 }
+function hasFoamPair(p){return !!p&&p.low>0&&p.high>0}
+function hasSixFaceFoam(l){return PADDING_AXES.every(axis=>hasFoamPair(l.padding?.[axis]))}
+function layoutScore(item,opt){return(item.evaluation?.sortScore??(item.quantity*100000+item.utilization*1000))+(opt?.sixFaceFoamRequired&&hasSixFaceFoam(item)?FOAM_CLOSURE_BONUS:0)}
+function isBetterLayout(candidate,best,opt){
+  if(!best)return true;
+  if(opt?.sixFaceFoamRequired){
+    const candidateHasFoam=hasSixFaceFoam(candidate),bestHasFoam=hasSixFaceFoam(best);
+    if(candidateHasFoam!==bestHasFoam)return candidateHasFoam;
+  }
+  const residualSum=candidate.residual.reduce((a,b)=>a+b,0),bestResidual=best.residual.reduce((a,b)=>a+b,0);
+  const itemScore=layoutScore(candidate,opt),bestScore=layoutScore(best,opt);
+  return itemScore>bestScore||(Math.abs(itemScore-bestScore)<1e-9&&residualSum<bestResidual);
+}
+function buildUniformLayout(c,box,opt,o,counts,rotation,meta={}){
+  const quantity=product(counts);if(quantity<=0)return null;
+  const residual=c.inner.map((v,i)=>Math.max(0,+(v-counts[i]*o[i]).toFixed(6)));
+  const item=finishLayout(c,box,opt,{mode:"uniformOrientation",orientation:o,counts,quantity,residual,areaUtilization:(counts[0]*counts[1]*o[0]*o[1])/(c.inner[0]*c.inner[1]),orientationDistribution:{rotation0:rotation===0?quantity:0,rotation90:rotation===90?quantity:0},boxes:null,rotation,...meta});
+  item.boxes=uniformBoxes(item);
+  return applyEvaluation(c,box,opt,item);
+}
+function foamFriendlyCounts(item,opt){
+  if(!opt.foam)return null;
+  const counts=item.counts.slice();
+  let changed=false;
+  for(let i=0;i<3;i++){
+    const axis=PADDING_AXES[i],current=item.padding?.[axis],step=Number(item.orientation?.[i])||0;
+    if(hasFoamPair(current)||counts[i]<=1||step<=0||step>opt.foamT*FOAM_FRIENDLY_MAX_STEP_RATIO+1e-9)continue;
+    const target=FOAM_MIN_COMPRESSED_MM*2,drop=Math.ceil((target-(Number(item.residual?.[i])||0)-1e-9)/step);
+    if(drop!==1||counts[i]-drop<1)continue;
+    counts[i]-=drop;changed=true;
+  }
+  return changed?counts:null;
+}
+function foamFriendlyUniformVariant(c,box,opt,item){
+  const counts=foamFriendlyCounts(item,opt);
+  if(!counts)return null;
+  const variant=buildUniformLayout(c,box,opt,item.orientation,counts,item.rotation,{foamAdjustment:"thin-axis-derated"});
+  return variant&&hasSixFaceFoam(variant)?variant:null;
+}
 function layoutForUniform(c,box,opt){
   const orientations=opt.upright?[[box.dims[0],box.dims[1],box.dims[2]],[box.dims[1],box.dims[0],box.dims[2]]]:uniquePermutations(box.dims);
   let best=null;
   for(const o of orientations){
     const counts=c.inner.map((v,i)=>axisCount(v,o[i],opt.clearance,opt.allowFullFit));
-    const quantity=product(counts);if(quantity<=0)continue;
-    const residual=c.inner.map((v,i)=>v-counts[i]*o[i]);
+    if(product(counts)<=0)continue;
     const rotation=o[0]===box.dims[0]&&o[1]===box.dims[1]?0:90;
-    const item=finishLayout(c,box,opt,{mode:"uniformOrientation",orientation:o,counts,quantity,residual,areaUtilization:(counts[0]*counts[1]*o[0]*o[1])/(c.inner[0]*c.inner[1]),orientationDistribution:{rotation0:rotation===0?quantity:0,rotation90:rotation===90?quantity:0},boxes:null,rotation});
-    item.boxes=uniformBoxes(item);
-    applyEvaluation(c,box,opt,item);
-    const residualSum=item.residual.reduce((a,b)=>a+b,0),bestResidual=best?.residual.reduce((a,b)=>a+b,0);
-    const itemScore=item.evaluation?.sortScore??(item.quantity*100000+item.utilization*1000);
-    const bestScore=best?.evaluation?.sortScore??(best?best.quantity*100000+best.utilization*1000:null);
-    if(!best||itemScore>bestScore||(Math.abs(itemScore-bestScore)<1e-9&&residualSum<bestResidual))best=item;
+    const item=buildUniformLayout(c,box,opt,o,counts,rotation);
+    for(const candidate of [item,foamFriendlyUniformVariant(c,box,opt,item)].filter(Boolean)){
+      if(isBetterLayout(candidate,best,opt))best=candidate;
+    }
   }
-  return best;
+  return opt.sixFaceFoamRequired&&best&&!hasSixFaceFoam(best)?null:best;
 }
 function layoutForMixed(c,box,opt,uniform){
   if(!window.PackingMixed)throw new Error("混排算法模块未加载");
@@ -120,15 +158,21 @@ function layoutFor(c,box,opt){
   const mixed=layoutForMixed(c,box,opt,uniform);
   if(!mixed)return uniform;
   if(!uniform)return mixed;
-  const mixedScore=mixed.evaluation?.sortScore??(mixed.quantity*100000+mixed.utilization*1000);
-  const uniformScore=uniform.evaluation?.sortScore??(uniform.quantity*100000+uniform.utilization*1000);
+  if(opt.sixFaceFoamRequired){
+    const mixedHasFoam=hasSixFaceFoam(mixed),uniformHasFoam=hasSixFaceFoam(uniform);
+    if(mixedHasFoam!==uniformHasFoam)return mixedHasFoam?mixed:uniform;
+    if(!mixedHasFoam&&!uniformHasFoam)return null;
+  }
+  const mixedScore=layoutScore(mixed,opt);
+  const uniformScore=layoutScore(uniform,opt);
   return mixedScore>uniformScore?mixed:uniform;
 }
 function collect(){
   const box={dims:[value("innerL"),value("innerW"),value("innerH")],weight:value("innerWeight")};
   if(Math.min(...box.dims)<=0)throw new Error("内盒尺寸必须大于0");
   const autoMode=$("autoMode").checked;
-  const opt={mode:$("mixedOrientationFlat")?.checked?"mixedOrientationFlat":"uniformOrientation",upright:$("upright").checked,foam:$("foamEnabled").checked,strict:$("strictErgonomics").checked,allowFullFit:$("allowFullFit")?.checked??true,foamPreference:$("foamPreference")?.value||"all",clearance:value("clearance"),foamT:value("foamThickness"),maxWeight:value("maxWeight"),cartonCost:value("cartonCost"),foamCost:value("foamCost"),handlingCost:value("handlingCost")};
+  const sixFaceFoamRequired=$("sixFaceFoamRequired")?.checked??false;
+  const opt={mode:$("mixedOrientationFlat")?.checked?"mixedOrientationFlat":"uniformOrientation",upright:$("upright").checked,foam:$("foamEnabled").checked||sixFaceFoamRequired,sixFaceFoamRequired,strict:$("strictErgonomics").checked,allowFullFit:$("allowFullFit")?.checked??true,foamPreference:$("foamPreference")?.value||"all",clearance:value("clearance"),foamT:value("foamThickness"),maxWeight:value("maxWeight"),cartonCost:value("cartonCost"),foamCost:value("foamCost"),handlingCost:value("handlingCost")};
   if(opt.foamT<=0)throw new Error("珍珠棉厚度必须大于0");
   let candidates;
   if(autoMode)candidates=COMMON.map(raw=>carton(raw));
@@ -144,7 +188,7 @@ function collect(){
   const hasCost=opt.cartonCost>0||opt.foamCost>0||opt.handlingCost>0;
   const foamTie=(a,b)=>Number(!!b.carton.has_existing_foam)-Number(!!a.carton.has_existing_foam);
   const residualScore=x=>x.layout.residual.reduce((a,b)=>a+b,0)+(x.layout.freeRectangles?.length||0)*20;
-  const score=x=>x.layout.evaluation?.sortScore??(x.layout.quantity*100000+x.layout.utilization*1000+(x.layout.areaUtilization||0)*500-residualScore(x));
+  const score=x=>(x.layout.evaluation?.sortScore??(x.layout.quantity*100000+x.layout.utilization*1000+(x.layout.areaUtilization||0)*500-residualScore(x)))+(opt.sixFaceFoamRequired&&hasSixFaceFoam(x.layout)?FOAM_CLOSURE_BONUS:0);
   evaluated.sort((a,b)=>hasCost
     ?(score(b)-score(a))||(a.layout.cost.costPerBox-b.layout.cost.costPerBox)||foamTie(a,b)||product(a.carton.inner)-product(b.carton.inner)
     :(score(b)-score(a))||foamTie(a,b)||product(a.carton.inner)-product(b.carton.inner));

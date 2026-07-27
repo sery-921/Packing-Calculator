@@ -93,6 +93,7 @@
         <p class="mixed-rule-note">默认关闭。开启后会增加混排候选。</p>
         <label class="switch-row"><span><strong>保持直立</strong><small>仅底面长宽互换</small></span><input id="upright" type="checkbox" checked></label>
         <label class="switch-row"><span><strong>按余量估算填充棉</strong><small>将剩余空间分到相对两面</small></span><input id="foamEnabled" type="checkbox" checked></label>
+        <label class="switch-row"><span><strong>六面必须都有泡棉</strong><small>开启后可通过少装一定数量的内盒换取六面都有缓冲</small></span><input id="sixFaceFoamRequired" type="checkbox"></label>
         <label class="switch-row"><span><strong>严格人体工学</strong><small>开启后超三边和/限重的箱型不列入</small></span><input id="strictErgonomics" type="checkbox"></label>
         <label class="switch-row"><span><strong>允许满装优先</strong><small>能完整放入时不因总公差少装一层</small></span><input id="allowFullFit" type="checkbox" checked></label>
       </div>
@@ -174,7 +175,7 @@
   <script type="module" src="preview3d.js?v=5"></script>
   <script src="packing-evaluator.js?v=3"></script>
   <script src="mixed-packing.js?v=2"></script>
-  <script src="app.js?v=11"></script>
+  <script src="app.js?v=12"></script>
   <script src="inner-box-recommender.js?v=4"></script>
 </body>
 </html>
