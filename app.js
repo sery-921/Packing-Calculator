@@ -77,6 +77,10 @@ function uniformBoxes(layout){
 function placedBoxesForLayout(layout){
   return Array.isArray(layout.boxes)&&layout.boxes.length?layout.boxes:uniformBoxes(layout);
 }
+function applyEvaluation(c,box,opt,layout){
+  if(window.PackingEvaluator)layout.evaluation=window.PackingEvaluator.evaluateLayout(layout,c,box,opt);
+  return layout;
+}
 function finishLayout(c,box,opt,item){
   const padding={length:pad(item.residual[0],opt.foamT,opt.foam),width:pad(item.residual[1],opt.foamT,opt.foam),height:pad(item.residual[2],opt.foamT,opt.foam)};
   const foamTotal=Object.values(padding).reduce((s,p)=>s+p.sheets,0);
@@ -93,8 +97,11 @@ function layoutForUniform(c,box,opt){
     const rotation=o[0]===box.dims[0]&&o[1]===box.dims[1]?0:90;
     const item=finishLayout(c,box,opt,{mode:"uniformOrientation",orientation:o,counts,quantity,residual,areaUtilization:(counts[0]*counts[1]*o[0]*o[1])/(c.inner[0]*c.inner[1]),orientationDistribution:{rotation0:rotation===0?quantity:0,rotation90:rotation===90?quantity:0},boxes:null,rotation});
     item.boxes=uniformBoxes(item);
+    applyEvaluation(c,box,opt,item);
     const residualSum=item.residual.reduce((a,b)=>a+b,0),bestResidual=best?.residual.reduce((a,b)=>a+b,0);
-    if(!best||item.quantity>best.quantity||(item.quantity===best.quantity&&item.utilization>best.utilization)||(item.quantity===best.quantity&&Math.abs(item.utilization-best.utilization)<1e-12&&residualSum<bestResidual))best=item;
+    const itemScore=item.evaluation?.sortScore??(item.quantity*100000+item.utilization*1000);
+    const bestScore=best?.evaluation?.sortScore??(best?best.quantity*100000+best.utilization*1000:null);
+    if(!best||itemScore>bestScore||(Math.abs(itemScore-bestScore)<1e-9&&residualSum<bestResidual))best=item;
   }
   return best;
 }
@@ -105,7 +112,7 @@ function layoutForMixed(c,box,opt,uniform){
   if(!mixed.feasible)return null;
   const residual=[mixed.remaining.lengthResidual,mixed.remaining.widthResidual,mixed.remaining.heightResidual].map(v=>Math.max(0,+v.toFixed(6)));
   const layout=finishLayout(c,box,opt,{mode:"mixedOrientationFlat",method:mixed.method,orientation:[box.dims[0],box.dims[1],box.dims[2]],counts:[mixed.countPerLayer,1,mixed.layers],quantity:mixed.count,residual,areaUtilization:mixed.areaUtilization,orientationDistribution:mixed.orientationDistribution,boxes:mixed.boxes,freeRectangles:mixed.freeRectangles,warnings:mixed.warnings||[],uniformQuantity:uniform?.quantity||0,improvement:mixed.count-(uniform?.quantity||0)});
-  return layout;
+  return applyEvaluation(c,box,opt,layout);
 }
 function layoutFor(c,box,opt){
   const uniform=layoutForUniform(c,box,opt);
@@ -113,9 +120,9 @@ function layoutFor(c,box,opt){
   const mixed=layoutForMixed(c,box,opt,uniform);
   if(!mixed)return uniform;
   if(!uniform)return mixed;
-  if(mixed.quantity>uniform.quantity)return mixed;
-  if(mixed.quantity===uniform.quantity&&mixed.utilization>=uniform.utilization)return mixed;
-  return uniform;
+  const mixedScore=mixed.evaluation?.sortScore??(mixed.quantity*100000+mixed.utilization*1000);
+  const uniformScore=uniform.evaluation?.sortScore??(uniform.quantity*100000+uniform.utilization*1000);
+  return mixedScore>uniformScore?mixed:uniform;
 }
 function collect(){
   const box={dims:[value("innerL"),value("innerW"),value("innerH")],weight:value("innerWeight")};
@@ -137,10 +144,10 @@ function collect(){
   const hasCost=opt.cartonCost>0||opt.foamCost>0||opt.handlingCost>0;
   const foamTie=(a,b)=>Number(!!b.carton.has_existing_foam)-Number(!!a.carton.has_existing_foam);
   const residualScore=x=>x.layout.residual.reduce((a,b)=>a+b,0)+(x.layout.freeRectangles?.length||0)*20;
-  const score=x=>x.layout.quantity*100000+x.layout.utilization*1000+(x.layout.areaUtilization||0)*500-residualScore(x);
+  const score=x=>x.layout.evaluation?.sortScore??(x.layout.quantity*100000+x.layout.utilization*1000+(x.layout.areaUtilization||0)*500-residualScore(x));
   evaluated.sort((a,b)=>hasCost
-    ?(b.layout.quantity-a.layout.quantity)||(a.layout.cost.costPerBox-b.layout.cost.costPerBox)||(score(b)-score(a))||foamTie(a,b)||product(a.carton.inner)-product(b.carton.inner)
-    :(b.layout.quantity-a.layout.quantity)||(score(b)-score(a))||foamTie(a,b)||product(a.carton.inner)-product(b.carton.inner));
+    ?(score(b)-score(a))||(a.layout.cost.costPerBox-b.layout.cost.costPerBox)||foamTie(a,b)||product(a.carton.inner)-product(b.carton.inner)
+    :(score(b)-score(a))||foamTie(a,b)||product(a.carton.inner)-product(b.carton.inner));
   return{box,opt,best:evaluated[0],alternatives:evaluated.slice(1,4),comparisonPlans:evaluated.slice(0,12),mode:autoMode?"auto-carton-selection":"fixed-carton"};
 }
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
@@ -946,8 +953,15 @@ function displayGridCounts(l){const boxes=Array.isArray(l.boxes)?l.boxes:[];if(!
 function layoutSummary(l){return isTrueMixedFlat(l)?`每层 ${l.counts[0]} × ${l.counts[2]}层 = ${l.quantity}`:`${displayGridCounts(l).join("×")}=${l.quantity}`}
 function planLayoutSummary(l){const counts=displayGridCounts(l);return isTrueMixedFlat(l)?layoutSummary(l):`长方向 ${counts[0]} × 宽方向 ${counts[1]} × 高方向 ${counts[2]} = ${l.quantity}`}
 function paddingModeAxis(l){return isTrueMixedFlat(l)?"混排":"装箱方式"}
-function paddingPackingSummary(l){const base=`底面积利用率 ${((l.areaUtilization||0)*100).toFixed(2)}%`;if(isTrueMixedFlat(l))return`${base} · ${orientationSummary(l)} · 较统一 ${l.improvement>0?`+${l.improvement}`:l.improvement||0}个`;const counts=displayGridCounts(l);return`${base} · 统一朝向平放 ${l.quantity}个 长${counts[0]}*宽${counts[1]}*高${counts[2]}`}
-function planCard(item,i,selectedKey){const c=item.carton,l=item.layout,e=item.ergonomics,foam=c.has_existing_foam?"配套珍珠棉":"无原表棉",risk=e.passed?"人体工学通过":"超建议需确认",improve=l.improvement>0?` · 较统一 +${l.improvement}`:"";return`<button class="plan-card ${planKey(item)===selectedKey?"selected":""}" data-plan="${i}"><strong>${i+1}. ${esc(c.code&&c.code!=="*" ? c.code : c.sku||"箱型")} · ${modeText(l)} · ${planLayoutSummary(l)}个</strong><span>${esc(c.name)} · 内尺寸 ${c.inner.join("×")} mm</span><em>体积 ${(l.utilization*100).toFixed(2)}% · 底面 ${((l.areaUtilization||0)*100).toFixed(2)}% · ${orientationSummary(l)} · 余量 ${l.residual.join("×")}mm${improve} · ${foam} · ${risk}</em></button>`}
+function evaluationSummary(l){const e=l.evaluation;if(!e)return"";return`${e.gap.message} · ${e.clearanceStatus.message}`}
+function evaluationTags(l){return(l.evaluation?.tags||[]).map(tag=>`<b class="plan-tag">${esc(tag)}</b>`).join("")}
+function paddingPackingSummary(l){
+  const base=`底面积利用率 ${((l.areaUtilization||0)*100).toFixed(2)}%`;
+  const evalText=l.evaluation?` · 最小方向余量 ${l.evaluation.clearance.minAxis}mm · 内部缺口 ${(l.evaluation.footprint.internalGapRatio*100).toFixed(1)}%`:"";
+  if(isTrueMixedFlat(l))return`${base} · ${orientationSummary(l)} · 较统一 ${l.improvement>0?`+${l.improvement}`:l.improvement||0}个${evalText}`;
+  const counts=displayGridCounts(l);return`${base} · 统一朝向平放 ${l.quantity}个 长${counts[0]}*宽${counts[1]}*高${counts[2]}${evalText}`
+}
+function planCard(item,i,selectedKey){const c=item.carton,l=item.layout,e=item.ergonomics,foam=c.has_existing_foam?"配套珍珠棉":"无原表棉",risk=e.passed?"人体工学通过":"超建议需确认",improve=l.improvement>0?` · 较统一 +${l.improvement}`:"",tags=evaluationTags(l),tagLine=tags?`<span class="plan-card-tags">${tags}</span>`:"";return`<button class="plan-card ${planKey(item)===selectedKey?"selected":""}" data-plan="${i}"><strong>${i+1}. ${esc(c.code&&c.code!=="*" ? c.code : c.sku||"箱型")} · ${modeText(l)} · ${planLayoutSummary(l)}个</strong><span>${esc(c.name)} · 内尺寸 ${c.inner.join("×")} mm</span>${tagLine}<em>体积 ${(l.utilization*100).toFixed(2)}% · 底面 ${((l.areaUtilization||0)*100).toFixed(2)}% · ${orientationSummary(l)} · 余量 ${l.residual.join("×")}mm${improve} · ${evaluationSummary(l)} · ${foam} · ${risk}</em></button>`}
 function renderPlanList(previewData,selectedKey){
   const plans=previewData.comparisonPlans;
   const selectedIndex=plans.findIndex(item=>planKey(item)===selectedKey);

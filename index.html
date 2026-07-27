@@ -56,11 +56,12 @@
       </label>
       <label class="field foam-preference-field">珍珠棉偏好
         <select id="foamPreference">
-          <option value="paired">只看配套棉</option>
-          <option value="all" selected>配套与不配套都推荐（可点击下拉）</option>
+          <option value="paired" selected>只看配套棉</option>
+          <option value="all">配套与不配套都推荐</option>
           <option value="unpaired">只看无配套棉</option>
         </select>
       </label>
+      <p class="preference-note">点击可以切换其它偏好</p>
       <div id="cartonFields">
         <div class="segmented">
           <label><input type="radio" name="dimensionType" value="inner" checked><span>内尺寸</span></label>
@@ -87,7 +88,8 @@
 
       <div class="section-title"><span>03</span><h2>规则</h2></div>
       <div class="option-grid">
-        <label class="switch-row"><span><strong>长宽混排平放</strong><small>同一外箱内允许 0°/90° 底面混排</small></span><input id="mixedOrientationFlat" type="checkbox" checked></label>
+        <label class="switch-row mixed-rule-switch"><span><strong>高级优化：平放混排优化</strong><small>允许同一外箱内 0°/90° 方向组合排列，用于探索更高装载率方案</small></span><input id="mixedOrientationFlat" type="checkbox"></label>
+        <p class="mixed-rule-note">默认关闭。开启后会增加混排候选。</p>
         <label class="switch-row"><span><strong>保持直立</strong><small>仅底面长宽互换</small></span><input id="upright" type="checkbox" checked></label>
         <label class="switch-row"><span><strong>按余量估算填充棉</strong><small>将剩余空间分到相对两面</small></span><input id="foamEnabled" type="checkbox" checked></label>
         <label class="switch-row"><span><strong>严格人体工学</strong><small>开启后超三边和/限重的箱型不列入</small></span><input id="strictErgonomics" type="checkbox"></label>
@@ -169,8 +171,9 @@
   }
   </script>
   <script type="module" src="preview3d.js?v=5"></script>
-  <script src="mixed-packing.js?v=1"></script>
-  <script src="app.js?v=9"></script>
+  <script src="packing-evaluator.js?v=3"></script>
+  <script src="mixed-packing.js?v=2"></script>
+  <script src="app.js?v=11"></script>
   <script src="inner-box-recommender.js?v=4"></script>
 </body>
 </html>

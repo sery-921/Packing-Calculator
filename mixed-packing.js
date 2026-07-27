@@ -133,7 +133,9 @@
     const count=plan.boxes.length,used=count?extents(plan.boxes):{length:0,width:0};
     const mixed=new Set(plan.boxes.map(b=>b.rotation)).size>1?1:0;
     const freePenalty=Array.isArray(plan.freeRectangles)?plan.freeRectangles.length:0;
-    return count*100000+(count?count*area(plan.boxes[0])/(L*W):0)*1000-(freePenalty*20)-mixed*4-(used.length+used.width)*0.0001;
+    const evaluation=root.PackingEvaluator?.evaluateLayerPlan?.(plan,L,W,[plan.boxes[0]?.length||0,plan.boxes[0]?.width||0,1]);
+    const gapPenalty=evaluation?evaluation.footprint.internalGapRatio*250000+evaluation.recommendationTier*50000:0;
+    return count*100000+(count?count*area(plan.boxes[0])/(L*W):0)*1000-(freePenalty*20)-mixed*4-(used.length+used.width)*0.0001-gapPenalty;
   }
 
   function bestLayerPlan(L,W,boxDims){
