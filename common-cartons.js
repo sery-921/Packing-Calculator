@@ -924,6 +924,34 @@ window.COMMON_CARTONS = [
     }
   },
   {
+    "name": "327000319 368×291×103 K6K",
+    "sku": "327000319",
+    "carton_type": "包装箱",
+    "code": "*",
+    "dimensions": [
+      368,
+      291,
+      103
+    ],
+    "dimension_type": "outer",
+    "material": "K6K",
+    "flute": "AB",
+    "wall_thickness_mm": 3,
+    "board_mass_kg_m2": 0.9,
+    "has_existing_foam": false,
+    "foam_note": "",
+    "reason": "",
+    "logo": false,
+    "no_logo": true,
+    "quality_mark": false,
+    "source": {
+      "workbook": "用户手动新增",
+      "worksheet": "",
+      "row": 0,
+      "dimension_column": "Carton K6K-L368*W291*H103mm不带LOGO"
+    }
+  },
+  {
     "name": "C22 375×370×270 K=K",
     "sku": "327111504",
     "carton_type": "包装箱",
