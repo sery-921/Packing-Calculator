@@ -1,169 +1,206 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#17324d">
-  <title>包装装箱优化器</title>
+  <title>鍖呰瑁呯浼樺寲鍣?/title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
   <header>
     <p class="eyebrow">PACKAGING GRID LAB</p>
-    <h1>包装装箱优化器</h1>
-    <p>输入尺寸，得到可复核的多方案对比、六面珍珠棉、人体工学校核与 DXF/PDF 图纸。</p>
+    <h1>鍖呰瑁呯浼樺寲鍣?/h1>
+    <p>杈撳叆灏哄锛屽緱鍒板彲澶嶆牳鐨勫鏂规瀵规瘮銆佸叚闈㈢弽鐝犳銆佷汉浣撳伐瀛︽牎鏍镐笌 DXF/PDF 鍥剧焊銆?/p>
   </header>
 
   <main>
     <section class="panel inner-recommender-panel" id="innerRecommender">
-      <div class="section-title"><span>00</span><h2>通用内盒推荐（可选）</h2></div>
-      <p class="feature-lead">00 模块用于推荐通用内盒。如不需要推荐，或已知销售内盒尺寸，可跳过此模块，直接填写 02 模块的内盒数据。</p>
-      <p class="feature-lead">如已知内装物产品尺寸，并需要推荐通用内盒，先输入产品尺寸，点击“推荐通用内盒”；匹配到可用内盒后，点击“使用此内盒”，系统会将对应通用内盒尺寸一键带入 02 模块。</p>
+      <div class="section-title"><span>00</span><h2>閫氱敤鍐呯洅鎺ㄨ崘锛堝彲閫夛級</h2></div>
+      <p class="feature-lead">00 妯″潡鐢ㄤ簬鎺ㄨ崘閫氱敤鍐呯洅銆傚涓嶉渶瑕佹帹鑽愶紝鎴栧凡鐭ラ攢鍞唴鐩掑昂瀵革紝鍙烦杩囨妯″潡锛岀洿鎺ュ～鍐?02 妯″潡鐨勫唴鐩掓暟鎹€?/p>
+      <p class="feature-lead">濡傚凡鐭ュ唴瑁呯墿浜у搧灏哄锛屽苟闇€瑕佹帹鑽愰€氱敤鍐呯洅锛屽厛杈撳叆浜у搧灏哄锛岀偣鍑烩€滄帹鑽愰€氱敤鍐呯洅鈥濓紱鍖归厤鍒板彲鐢ㄥ唴鐩掑悗锛岀偣鍑烩€滀娇鐢ㄦ鍐呯洅鈥濓紝绯荤粺浼氬皢瀵瑰簲閫氱敤鍐呯洅灏哄涓€閿甫鍏?02 妯″潡銆?/p>
       <div class="inner-recommender-grid">
         <div>
           <div class="dimension-grid">
-            <label>产品长 L<input id="productL" type="number" min="0" step="0.1" value="180"><em>mm</em></label>
-            <label>产品宽 W<input id="productW" type="number" min="0" step="0.1" value="120"><em>mm</em></label>
-            <label>产品高 H<input id="productH" type="number" min="0" step="0.1" value="50"><em>mm</em></label>
+            <label>浜у搧闀?L<input id="productL" type="number" min="0" step="0.1" value="180"><em>mm</em></label>
+            <label>浜у搧瀹?W<input id="productW" type="number" min="0" step="0.1" value="120"><em>mm</em></label>
+            <label>浜у搧楂?H<input id="productH" type="number" min="0" step="0.1" value="50"><em>mm</em></label>
           </div>
           <div class="dimension-grid compact inner-recommender-options">
-            <label>每侧缓冲<input id="productBuffer" type="number" min="0" step="0.5" value="2"><em>mm</em></label>
+            <label>姣忎晶缂撳啿<input id="productBuffer" type="number" min="0" step="0.5" value="2"><em>mm</em></label>
           </div>
-          <p class="hint">匹配尺寸 = 产品尺寸 + 两侧缓冲；内盒内尺寸按外尺寸、材质厚度和 SKU 扣减系数估算。</p>
+          <p class="hint">鍖归厤灏哄 = 浜у搧灏哄 + 涓や晶缂撳啿锛涘唴鐩掑唴灏哄鎸夊灏哄銆佹潗璐ㄥ帤搴﹀拰 SKU 鎵ｅ噺绯绘暟浼扮畻銆?/p>
         </div>
         <div class="inner-rules-column">
           <aside class="inner-rules-card">
-          <strong>当前预览规则</strong>
-          <p>K6K 单板 3 mm；K3K / K3KE 坑单板 2 mm。</p>
-          <p>默认扣减系数：长 ×10、宽 ×3、高 ×2；每个 SKU 可单独覆盖。</p>
-          <p>A 级优先：长宽余量 ≤12 mm、高度余量 ≤8 mm；大余量会标记为需填充。</p>
+          <strong>褰撳墠棰勮瑙勫垯</strong>
+          <p>K6K 鍗曟澘 3 mm锛汯3K / K3KE 鍧戝崟鏉?2 mm銆?/p>
+          <p>榛樿鎵ｅ噺绯绘暟锛氶暱 脳10銆佸 脳3銆侀珮 脳2锛涙瘡涓?SKU 鍙崟鐙鐩栥€?/p>
+          <p>A 绾т紭鍏堬細闀垮浣欓噺 鈮?2 mm銆侀珮搴︿綑閲?鈮? mm锛涘ぇ浣欓噺浼氭爣璁颁负闇€濉厖銆?/p>
           </aside>
           <div class="inner-rules-actions">
-            <label class="switch-row inline-switch"><span><strong>允许长宽旋转</strong><small>比较 0° / 90° 两种底面方向</small></span><input id="productRotate" type="checkbox" checked></label>
-            <button id="recommendInnerBox" class="secondary">推荐通用内盒</button>
+            <label class="switch-row inline-switch"><span><strong>鍏佽闀垮鏃嬭浆</strong><small>姣旇緝 0掳 / 90掳 涓ょ搴曢潰鏂瑰悜</small></span><input id="productRotate" type="checkbox" checked></label>
+            <button id="recommendInnerBox" class="secondary">鎺ㄨ崘閫氱敤鍐呯洅</button>
           </div>
         </div>
       </div>
-      <p id="innerMatchStatus" class="inner-match-status">输入产品尺寸后点击“推荐通用内盒”。</p>
+      <p id="innerMatchStatus" class="inner-match-status">杈撳叆浜у搧灏哄鍚庣偣鍑烩€滄帹鑽愰€氱敤鍐呯洅鈥濄€?/p>
       <div id="innerMatchResults" class="inner-match-results"></div>
     </section>
 
     <section class="panel form-panel">
-      <div class="section-title"><span>01</span><h2>箱型</h2></div>
+      <div class="section-title"><span>00</span><h2>瑁呯妯″紡</h2></div>
+      <div class="segmented mode-segmented">
+        <label><input type="radio" name="packMode" value="innerBox" checked><span>閿€鍞唴鐩?/span></label>
+        <label><input type="radio" name="packMode" value="knifeCard"><span>瑁镐骇鍝?鍒€鍗?/span></label>
+      </div>
+
+      <div class="section-title"><span>01</span><h2>绠卞瀷</h2></div>
       <label class="switch-row">
-        <span><strong>自动推荐通用箱型</strong><small>Seeed 纸箱库；按珍珠棉偏好、利用率和人体工学筛选</small></span>
+        <span><strong>鑷姩鎺ㄨ崘閫氱敤绠卞瀷</strong><small>Seeed 绾哥搴擄紱鎸夌弽鐝犳鍋忓ソ銆佸埄鐢ㄧ巼鍜屼汉浣撳伐瀛︾瓫閫?/small></span>
         <input id="autoMode" type="checkbox" checked>
       </label>
-      <label class="field foam-preference-field">珍珠棉偏好
-        <select id="foamPreference">
-          <option value="paired" selected>只看配套棉</option>
-          <option value="all">配套与不配套都推荐</option>
-          <option value="unpaired">只看无配套棉</option>
+      <label class="field foam-preference-field">鐝嶇彔妫夊亸濂?        <select id="foamPreference">
+          <option value="paired" selected>鍙湅閰嶅妫?/option>
+          <option value="all">閰嶅涓庝笉閰嶅閮芥帹鑽?/option>
+          <option value="unpaired">鍙湅鏃犻厤濂楁</option>
         </select>
       </label>
-      <p class="preference-note">点击可以切换其它偏好</p>
+      <p class="preference-note">鐐瑰嚮鍙互鍒囨崲鍏跺畠鍋忓ソ</p>
       <div id="cartonFields">
         <div class="segmented">
-          <label><input type="radio" name="dimensionType" value="inner" checked><span>内尺寸</span></label>
-          <label><input type="radio" name="dimensionType" value="outer"><span>外尺寸</span></label>
+          <label><input type="radio" name="dimensionType" value="inner" checked><span>鍐呭昂瀵?/span></label>
+          <label><input type="radio" name="dimensionType" value="outer"><span>澶栧昂瀵?/span></label>
         </div>
         <div class="dimension-grid">
-          <label>长 L<input id="cartonL" type="number" min="0" step="0.1" value="584"><em>mm</em></label>
-          <label>宽 W<input id="cartonW" type="number" min="0" step="0.1" value="384"><em>mm</em></label>
-          <label>高 H<input id="cartonH" type="number" min="0" step="0.1" value="384"><em>mm</em></label>
+          <label>闀?L<input id="cartonL" type="number" min="0" step="0.1" value="584"><em>mm</em></label>
+          <label>瀹?W<input id="cartonW" type="number" min="0" step="0.1" value="384"><em>mm</em></label>
+          <label>楂?H<input id="cartonH" type="number" min="0" step="0.1" value="384"><em>mm</em></label>
         </div>
-        <label class="field">楞型
+        <label class="field">妤炲瀷
           <select id="flute"><option>E</option><option>B</option><option>C</option><option>A</option><option>AB</option><option>BE</option><option selected>BC</option><option>AAA</option></select>
         </label>
       </div>
 
-      <div class="section-title"><span>02</span><h2>销售内盒</h2></div>
+      <div class="section-title"><span>02</span><h2>閿€鍞唴鐩?/h2></div>
       <div class="dimension-grid">
-        <label>长 l<input id="innerL" type="number" min="0" step="0.1" value="200"><em>mm</em></label>
-        <label>宽 w<input id="innerW" type="number" min="0" step="0.1" value="150"><em>mm</em></label>
-        <label>高 h<input id="innerH" type="number" min="0" step="0.1" value="100"><em>mm</em></label>
+        <label>闀?l<input id="innerL" type="number" min="0" step="0.1" value="200"><em>mm</em></label>
+        <label>瀹?w<input id="innerW" type="number" min="0" step="0.1" value="150"><em>mm</em></label>
+        <label>楂?h<input id="innerH" type="number" min="0" step="0.1" value="100"><em>mm</em></label>
       </div>
-      <div id="innerBoxGuide" class="box-dimension-guide" aria-label="销售内盒长宽高图解"></div>
-      <label class="field">单盒重量<input id="innerWeight" type="number" min="0" step="0.01" value="0.25"><em>kg</em></label>
+      <div id="innerBoxGuide" class="box-dimension-guide" aria-label="閿€鍞唴鐩掗暱瀹介珮鍥捐В"></div>
+      <label class="field">鍗曠洅閲嶉噺<input id="innerWeight" type="number" min="0" step="0.01" value="0.25"><em>kg</em></label>
 
-      <div class="section-title"><span>03</span><h2>规则</h2></div>
+      <div id="knifeCardFields" hidden>
+        <div class="section-title"><span>02K</span><h2>鍒€鍗¤鍒?/h2></div>
+        <label class="switch-row">
+          <span><strong>鍏佽鑷姩鍊炬枩</strong><small>鑷姩鎺ㄨ崘鍙緭鍑哄彲琛屾柟妗堬紝浼樺厛鐩存斁锛屽啀鎵炬渶灏忓彲琛屽€炬枩瑙?/small></span>
+          <input id="knifeAutoTilt" type="checkbox" checked>
+        </label>
+        <div class="dimension-grid compact">
+          <label>鏈€澶у€炬枩瑙?input id="knifeMaxTilt" type="number" min="0" max="45" step="1" value="30"><em>掳</em></label>
+          <label>鍏ユ牸浣欓噺<input id="knifeCellClearance" type="number" min="0" step="0.1" value="1"><em>mm</em></label>
+          <label>鎼滅储姝ラ暱<input id="knifeTiltStep" type="number" min="0.1" max="5" step="0.1" value="0.5"><em>掳</em></label>
+        </div>
+        <details class="knife-verify">
+          <summary>楠岃瘉鎸囧畾鍊炬枩瑙掞紙鍙€夛級</summary>
+          <div class="dimension-grid compact">
+            <label>鏂规
+              <select id="knifeVerifyKit"></select>
+            </label>
+            <label>鍊炬枩鏂瑰悜
+              <select id="knifeVerifyAxis">
+                <option value="auto">鑷姩</option>
+                <option value="length">娌块暱鍚?/option>
+                <option value="width">娌垮鍚?/option>
+              </select>
+            </label>
+            <label>鎸囧畾瑙掑害<input id="knifeVerifyAngle" type="number" min="0" max="60" step="0.1" value="0"><em>掳</em></label>
+          </div>
+          <button id="verifyKnifeAngle" class="secondary" type="button">楠岃瘉瑙掑害</button>
+          <p id="knifeVerifyResult" class="inner-match-status"></p>
+        </details>
+      </div>
+
+      <div class="section-title"><span>03</span><h2>瑙勫垯</h2></div>
       <div class="option-grid">
-        <label class="switch-row mixed-rule-switch"><span><strong>高级优化：平放混排优化</strong><small>允许同一外箱内 0°/90° 方向组合排列，用于探索更高装载率方案</small></span><input id="mixedOrientationFlat" type="checkbox"></label>
-        <p class="mixed-rule-note">默认关闭。开启后会增加混排候选。</p>
-        <label class="switch-row"><span><strong>高度方向固定</strong><small>只允许底面长宽旋转</small></span><input id="upright" type="checkbox" checked></label>
-        <label class="switch-row"><span><strong>按余量估算填充棉</strong><small>把装箱后剩余空隙换算成珍珠棉片数，并分到六个面。</small></span><input id="foamEnabled" type="checkbox" checked></label>
-        <label class="switch-row"><span><strong>六面必须都有泡棉</strong><small>开启后可通过少装一定数量的内盒换取六面都有缓冲</small></span><input id="sixFaceFoamRequired" type="checkbox"></label>
-        <label class="switch-row"><span><strong>允许满装优先</strong><small>默认每个方向会扣 1mm 保守计算；开启后，刚好能放满时仍按满装计算</small></span><input id="allowFullFit" type="checkbox" checked></label>
-        <label class="switch-row"><span><strong>严格人体工学</strong><small>自动选箱时，排除三边和超过 1200 mm、最长边超过 800 mm、总重超过所填限重的方案</small></span><input id="strictErgonomics" type="checkbox"></label>
+        <label class="switch-row mixed-rule-switch"><span><strong>楂樼骇浼樺寲锛氬钩鏀炬贩鎺掍紭鍖?/strong><small>鍏佽鍚屼竴澶栫鍐?0掳/90掳 鏂瑰悜缁勫悎鎺掑垪锛岀敤浜庢帰绱㈡洿楂樿杞界巼鏂规</small></span><input id="mixedOrientationFlat" type="checkbox"></label>
+        <p class="mixed-rule-note">榛樿鍏抽棴銆傚紑鍚悗浼氬鍔犳贩鎺掑€欓€夈€?/p>
+        <label class="switch-row"><span><strong>楂樺害鏂瑰悜鍥哄畾</strong><small>鍙厑璁稿簳闈㈤暱瀹芥棆杞?/small></span><input id="upright" type="checkbox" checked></label>
+        <label class="switch-row"><span><strong>鎸変綑閲忎及绠楀～鍏呮</strong><small>鎶婅绠卞悗鍓╀綑绌洪殭鎹㈢畻鎴愮弽鐝犳鐗囨暟锛屽苟鍒嗗埌鍏釜闈€?/small></span><input id="foamEnabled" type="checkbox" checked></label>
+        <label class="switch-row"><span><strong>鍏潰蹇呴』閮芥湁娉℃</strong><small>寮€鍚悗鍙€氳繃灏戣涓€瀹氭暟閲忕殑鍐呯洅鎹㈠彇鍏潰閮芥湁缂撳啿</small></span><input id="sixFaceFoamRequired" type="checkbox"></label>
+        <label class="switch-row"><span><strong>鍏佽婊¤浼樺厛</strong><small>榛樿姣忎釜鏂瑰悜浼氭墸 1mm 淇濆畧璁＄畻锛涘紑鍚悗锛屽垰濂借兘鏀炬弧鏃朵粛鎸夋弧瑁呰绠?/small></span><input id="allowFullFit" type="checkbox" checked></label>
+        <label class="switch-row"><span><strong>涓ユ牸浜轰綋宸ュ</strong><small>鑷姩閫夌鏃讹紝鎺掗櫎涓夎竟鍜岃秴杩?1200 mm銆佹渶闀胯竟瓒呰繃 800 mm銆佹€婚噸瓒呰繃鎵€濉檺閲嶇殑鏂规</small></span><input id="strictErgonomics" type="checkbox"></label>
       </div>
       <div class="dimension-grid compact">
-        <label>总公差<input id="clearance" type="number" min="0" step="0.1" value="1"><em>mm</em></label>
-        <label>棉片厚<input id="foamThickness" type="number" min="0.1" step="0.1" value="10"><em>mm</em></label>
-        <label>限重<input id="maxWeight" type="number" min="0" step="0.1" value="20"><em>kg</em></label>
+        <label>鎬诲叕宸?input id="clearance" type="number" min="0" step="0.1" value="1"><em>mm</em></label>
+        <label>妫夌墖鍘?input id="foamThickness" type="number" min="0.1" step="0.1" value="10"><em>mm</em></label>
+        <label>闄愰噸<input id="maxWeight" type="number" min="0" step="0.1" value="20"><em>kg</em></label>
       </div>
       <div class="dimension-grid compact">
-        <label>纸箱成本<input id="cartonCost" type="number" min="0" step="0.01" value="0"><em>/箱</em></label>
-        <label>棉片成本<input id="foamCost" type="number" min="0" step="0.01" value="0"><em>/片</em></label>
-        <label>处理成本<input id="handlingCost" type="number" min="0" step="0.01" value="0"><em>/箱</em></label>
+        <label>绾哥鎴愭湰<input id="cartonCost" type="number" min="0" step="0.01" value="0"><em>/绠?/em></label>
+        <label>妫夌墖鎴愭湰<input id="foamCost" type="number" min="0" step="0.01" value="0"><em>/鐗?/em></label>
+        <label>澶勭悊鎴愭湰<input id="handlingCost" type="number" min="0" step="0.01" value="0"><em>/绠?/em></label>
       </div>
-      <button id="calculate" class="primary">计算装箱方案</button>
+      <button id="calculate" class="primary">璁＄畻瑁呯鏂规</button>
       <p id="error" class="error" role="alert"></p>
     </section>
 
     <section id="results" class="results" hidden>
       <article class="hero-result">
-        <div><span class="kicker">最优排列</span><strong id="countGrid">—</strong><small id="orientationText">—</small></div>
-        <div class="quantity"><strong id="quantity">—</strong><span>个 / 箱</span></div>
+        <div><span class="kicker">鏈€浼樻帓鍒?/span><strong id="countGrid">鈥?/strong><small id="orientationText">鈥?/small></div>
+        <div class="quantity"><strong id="quantity">鈥?/strong><span>涓?/ 绠?/span></div>
       </article>
       <div class="metric-grid">
-        <article><span>空间利用率</span><strong id="utilization">—</strong></article>
-        <article><span>估算总重</span><strong id="totalWeight">—</strong></article>
-        <article><span>珍珠棉</span><strong id="foamTotal">—</strong></article>
+        <article><span>绌洪棿鍒╃敤鐜?/span><strong id="utilization">鈥?/strong></article>
+        <article><span>浼扮畻鎬婚噸</span><strong id="totalWeight">鈥?/strong></article>
+        <article><span>鐝嶇彔妫?/span><strong id="foamTotal">鈥?/strong></article>
       </div>
       <article class="panel preview-panel">
-        <div class="section-title"><span>04</span><h2>工程预览</h2></div>
+        <div class="section-title"><span>04</span><h2>宸ョ▼棰勮</h2></div>
         <div id="preview"></div>
       </article>
       <article class="panel">
-        <div class="section-title"><span>05</span><h2>六面余量</h2></div>
+        <div class="section-title"><span>05</span><h2>鍏潰浣欓噺</h2></div>
         <div id="paddingTable" class="padding-table"></div>
       </article>
       <article class="panel">
-        <div class="section-title"><span>06</span><h2>方案对比</h2></div>
+        <div class="section-title"><span>06</span><h2>鏂规瀵规瘮</h2></div>
         <div id="planList" class="plan-list"></div>
         <button id="planDisclosure" class="list-disclosure" type="button" aria-expanded="false" hidden>
-          <span>展开其余方案</span><i class="disclosure-arrow" aria-hidden="true"></i>
+          <span>灞曞紑鍏朵綑鏂规</span><i class="disclosure-arrow" aria-hidden="true"></i>
         </button>
-        <p class="hint">推荐方案用于排序参考；最终量产方案仍由人工确认。</p>
+        <p class="hint">鎺ㄨ崘鏂规鐢ㄤ簬鎺掑簭鍙傝€冿紱鏈€缁堥噺浜ф柟妗堜粛鐢变汉宸ョ‘璁ゃ€?/p>
       </article>
       <article class="panel pdf-preview-panel">
         <button id="pdfPreviewToggle" class="section-title section-toggle" type="button" aria-expanded="false" aria-controls="pdfPreviewBody">
-          <span>07</span><div class="section-heading"><h2>PDF预览</h2><small>点击可展开预览 PDF，后续可在08模块导出</small></div><span class="disclosure-label">展开</span><i class="disclosure-arrow" aria-hidden="true"></i>
+          <span>07</span><div class="section-heading"><h2>PDF棰勮</h2><small>鐐瑰嚮鍙睍寮€棰勮 PDF锛屽悗缁彲鍦?8妯″潡瀵煎嚭</small></div><span class="disclosure-label">灞曞紑</span><i class="disclosure-arrow" aria-hidden="true"></i>
         </button>
         <div id="pdfPreviewBody" hidden>
           <canvas id="pdfPreviewCanvas" width="1240" height="1754"></canvas>
         </div>
       </article>
       <article class="panel">
-        <div class="section-title"><span>08</span><h2>导出</h2></div>
+        <div class="section-title"><span>08</span><h2>瀵煎嚭</h2></div>
         <div class="download-grid">
           <a data-download="pdf" href="#" aria-disabled="true">PDF</a>
           <a data-download="excel" href="#" aria-disabled="true">Excel</a>
           <a data-download="json" href="#" aria-disabled="true">JSON</a>
-          <a data-download="report" href="#" aria-disabled="true">报告</a>
-          <a data-download="dxf" href="#" aria-disabled="true">DXF 图纸</a>
+          <a data-download="report" href="#" aria-disabled="true">鎶ュ憡</a>
+          <a data-download="dxf" href="#" aria-disabled="true">DXF 鍥剧焊</a>
         </div>
-        <p id="exportStatus" class="export-status" role="status">计算完成后即可导出文件。</p>
-        <p class="hint">Excel为装箱物料清单；DXF 可用中望 CAD 打开；PDF 与 DXF 图纸内容对应，写明纸箱、内盒和珍珠棉用量；报告为md格式。</p>
+        <p id="exportStatus" class="export-status" role="status">璁＄畻瀹屾垚鍚庡嵆鍙鍑烘枃浠躲€?/p>
+        <p class="hint">Excel涓鸿绠辩墿鏂欐竻鍗曪紱DXF 鍙敤涓湜 CAD 鎵撳紑锛汸DF 涓?DXF 鍥剧焊鍐呭瀵瑰簲锛屽啓鏄庣焊绠便€佸唴鐩掑拰鐝嶇彔妫夌敤閲忥紱鎶ュ憡涓簃d鏍煎紡銆?/p>
       </article>
     </section>
   </main>
-  <footer>Grid optimizer · deterministic geometry · offline ready</footer>
+  <footer>Grid optimizer 路 deterministic geometry 路 offline ready</footer>
   <script src="common-cartons.js"></script>
   <script src="epe-foam-skus.js"></script>
   <script src="epe-foam-face-maps.js"></script>
   <script src="common-inner-boxes.js?v=2"></script>
+  <script src="knife-card-kits.js?v=1"></script>
   <script type="importmap">
   {
     "imports": {
@@ -175,7 +212,8 @@
   <script type="module" src="preview3d.js?v=6"></script>
   <script src="packing-evaluator.js?v=3"></script>
   <script src="mixed-packing.js?v=2"></script>
-  <script src="app.js?v=15"></script>
+  <script src="app.js?v=16"></script>
   <script src="inner-box-recommender.js?v=5"></script>
 </body>
 </html>
+

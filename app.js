@@ -193,7 +193,9 @@ function collect(){
   evaluated.sort((a,b)=>hasCost
     ?(score(b)-score(a))||(a.layout.cost.costPerBox-b.layout.cost.costPerBox)||foamTie(a,b)||product(a.carton.inner)-product(b.carton.inner)
     :(score(b)-score(a))||foamTie(a,b)||product(a.carton.inner)-product(b.carton.inner));
-  return{box,opt,best:evaluated[0],alternatives:evaluated.slice(1,4),comparisonPlans:evaluated.slice(0,12),mode:autoMode?"auto-carton-selection":"fixed-carton"};
+  const _maxQty=evaluated.length?evaluated[0].layout.quantity:0;
+  const _planLimit=_maxQty<=3?evaluated.length:12;
+  return{box,opt,best:evaluated[0],alternatives:evaluated.slice(1,4),comparisonPlans:evaluated.slice(0,_planLimit),mode:autoMode?"auto-carton-selection":"fixed-carton"};
 }
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 function innerBoxGuideSvg(){
@@ -1062,11 +1064,11 @@ function displayGridCounts(l){const boxes=Array.isArray(l.boxes)?l.boxes:[];if(!
 function layoutSummary(l){return isTrueMixedFlat(l)?`每层 ${l.counts[0]} × ${l.counts[2]}层 = ${l.quantity}`:`${displayGridCounts(l).join("×")}=${l.quantity}`}
 function planLayoutSummary(l){const counts=displayGridCounts(l);return isTrueMixedFlat(l)?layoutSummary(l):`长方向 ${counts[0]} × 宽方向 ${counts[1]} × 高方向 ${counts[2]} = ${l.quantity}`}
 function paddingModeAxis(l){return isTrueMixedFlat(l)?"混排":"装箱方式"}
-function evaluationSummary(l){const e=l.evaluation;if(!e)return"";return`${e.gap.message} · ${e.clearanceStatus.message}`}
+function evaluationSummary(l){const e=l.evaluation;if(!e)return"";const gapPart=isTrueMixedFlat(l)?`${e.gap.message} · `:"";return`${gapPart}${e.clearanceStatus.message}`}
 function evaluationTags(l){return(l.evaluation?.tags||[]).map(tag=>`<b class="plan-tag">${esc(tag)}</b>`).join("")}
 function paddingPackingSummary(l){
   const base=`底面积利用率 ${((l.areaUtilization||0)*100).toFixed(2)}%`;
-  const evalText=l.evaluation?` · 最小方向余量 ${l.evaluation.clearance.minAxis}mm · 内部缺口 ${(l.evaluation.footprint.internalGapRatio*100).toFixed(1)}%`:"";
+  const evalText=l.evaluation?` · 最小方向余量 ${l.evaluation.clearance.minAxis}mm${isTrueMixedFlat(l)?` · 内部缺口 ${(l.evaluation.footprint.internalGapRatio*100).toFixed(1)}%`:""}`:"";
   if(isTrueMixedFlat(l))return`${base} · ${orientationSummary(l)} · 较统一 ${l.improvement>0?`+${l.improvement}`:l.improvement||0}个${evalText}`;
   const counts=displayGridCounts(l);return`${base} · 统一朝向平放 ${l.quantity}个 长${counts[0]}*宽${counts[1]}*高${counts[2]}${evalText}`
 }
