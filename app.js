@@ -552,15 +552,15 @@ function svgPreviewV4(data){
   const carton=`<g class="cartonV4"><polygon class="cartonLeftV4" points="360,624 600,714 600,814 360,724"/><polygon class="cartonRightV4" points="840,624 600,714 600,814 840,724"/><polygon class="cartonInsideV4" points="360,624 600,536 840,624 600,714"/><polygon class="flapV4" points="360,624 600,536 548,486 292,578"/><polygon class="flapV4" points="840,624 600,536 652,486 908,578"/><polygon class="flapV4" points="360,624 600,714 600,658 316,552"/><polygon class="flapV4" points="840,624 600,714 600,658 884,552"/><polyline class="cartonRimV4" points="360,624 600,536 840,624 600,714 360,624"/></g>`;
   const totalFoam=faces.reduce((s,f)=>s+(Number(f.count)||0),0),material=String(c.material||c.flute||"");
   const title=esc([c.code&&c.code!=="*"?c.code:c.sku||"",Array.isArray(c.outer)?`${c.outer.join(xMark)} mm`:"",material].filter(Boolean).join(" · "));
-  const subtitle=esc(`\u5185\u76d2 ${data.box.dims.join(" × ")} mm · \u73cd\u73e0\u68c9 ${totalFoam} \u7247`);
+  const subtitle=esc(`\u5185\u76d2 ${l.orientation.join(" × ")} mm${l.rotation===90?"（90°长宽互换）":""} · \u73cd\u73e0\u68c9 ${totalFoam} \u7247`);
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 820" preserveAspectRatio="xMidYMid meet" role="img" aria-label="engineering preview"><defs><linearGradient id="bgV4" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fbfdff"/><stop offset="1" stop-color="#edf4fa"/></linearGradient><linearGradient id="pinkV4" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff8fc7"/><stop offset="1" stop-color="#df519e"/></linearGradient><linearGradient id="blueV4" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#aab2ff"/><stop offset="1" stop-color="#5c6fe2"/></linearGradient><linearGradient id="topV4" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff4b4"/><stop offset="1" stop-color="#ffd55e"/></linearGradient><pattern id="foamPatternV4" width="18" height="18" patternUnits="userSpaceOnUse"><rect width="18" height="18" fill="#c9eee6"/><path d="M0 9H18M9 0V18" stroke="#f9fffd" stroke-width="1"/><circle cx="4.5" cy="4.5" r="1.15" fill="#fff" opacity=".72"/></pattern><filter id="shadowV4" x="-25%" y="-25%" width="150%" height="150%"><feDropShadow dx="0" dy="11" stdDeviation="11" flood-color="#14324d" flood-opacity=".16"/></filter><style>.foamV4,.innerBlockV4,.cartonV4{filter:url(#shadowV4)}.foamPanelV4{fill:url(#foamPatternV4);stroke:#277c6e;stroke-width:2}.innerPinkV4{fill:url(#pinkV4);stroke:#153c60;stroke-width:2}.innerBlueV4{fill:url(#blueV4);stroke:#153c60;stroke-width:2}.innerTopV4{fill:url(#topV4);stroke:#153c60;stroke-width:2}.gridV4{stroke:#153c60;stroke-width:1.55;fill:none}.flapV4{fill:#deb777;stroke:#765335;stroke-width:1.9}.cartonInsideV4{fill:#bf8e55;fill-opacity:.45;stroke:#765335;stroke-width:1.8}.cartonLeftV4{fill:#d1a46e;stroke:#765335;stroke-width:1.9}.cartonRightV4{fill:#a87849;stroke:#765335;stroke-width:1.9}.cartonRimV4{fill:none;stroke:#65452c;stroke-width:2.2}.badgeV4 rect{fill:#fcfffd;stroke:#3b9876;stroke-width:1.5}.badgeV4 text{font:700 16px "Microsoft YaHei",Arial,sans-serif;fill:#087146}.footerV4 rect{fill:#fff;stroke:#d5e0e8}.footerV4 text{font:700 25px "Microsoft YaHei",Arial,sans-serif;fill:#102b45}</style></defs><rect width="1120" height="820" rx="28" fill="url(#bgV4)"/>${carton}${faces.map(panel).join("")}${block}<g class="footerV4"><rect x="268" y="752" width="584" height="50" rx="12"/><text x="560" y="785" text-anchor="middle">${txt.assembly}: ${txt.length} ${nx} ${xMark} ${txt.width} ${ny} ${xMark} ${txt.height} ${nz} = ${l.quantity} pcs</text></g></svg>`;
 }
 function report(data){const {carton:c,layout:l}=data.best,p=l.padding,d=l.orientationDistribution||{rotation0:0,rotation90:0},foamLine=c.has_existing_foam?`- 原表配套珍珠棉：${c.foam_note||"有配套珍珠棉备注"}\n`:"",mode=l.mode==="mixedOrientationFlat"?"平放长宽混排":"统一朝向网格";return`## 输入参数
 - 外箱内尺寸：长${c.inner[0]}×宽${c.inner[1]}×高${c.inner[2]} mm
 - 推荐箱型：${c.name}
 - 箱型信息：SKU ${c.sku||"-"}；编码 ${c.code||"-"}；材质 ${c.material||c.flute}
-${foamLine}- 内盒尺寸：长${data.box.dims[0]}×宽${data.box.dims[1]}×高${data.box.dims[2]} mm
-- 装箱模式：${mode}
+${foamLine}- 内盒尺寸：长${l.orientation[0]}×宽${l.orientation[1]}×高${l.orientation[2]} mm${l.rotation===90?"（90°长宽互换）":""}
+- 装箱模式：${mode}${l.rotation===90?"（90°长宽互换）":""}
 - 珍珠棉厚度：${data.opt.foamT}mm/片
 
 ## 最优装配方案
@@ -651,7 +651,7 @@ function dxf(data){
   const offX=p.length.lowStack+p.length.unfilled/2,offY=p.width.lowStack+p.width.unfilled/2,offZ=p.height.lowStack+p.height.unfilled/2;
   text(ox,30,8,"CARTON PACKING DRAWING");
   text(ox,45,5,`CARTON SKU ${c.sku||"-"} CODE ${c.code||"-"} OUT ${ol}x${ow}x${oh}mm IN ${cl}x${cw}x${ch}mm`);
-  text(ox,55,5,`INNER ${data.box.dims.join("x")}mm GRID ${nl}x${nw}x${nh}=${l.quantity}pcs/carton EPE ${data.opt.foamT}mm`);
+  text(ox,55,5,`INNER ${l.orientation.join("x")}mm${l.rotation===90?" ROT90":""} GRID ${nl}x${nw}x${nh}=${l.quantity}pcs/carton EPE ${data.opt.foamT}mm`);
   text(ox,65,5,`BOM CARTON 1pcs LR ${p.length.sheets}pcs ${code("length")} FB ${p.width.sheets}pcs ${code("width")} TB ${p.height.sheets}pcs ${code("height")}`);
   text(ox,oy-12,5,"TOP VIEW");
   rect(ox,oy,cl,cw,"CARTON");
@@ -700,7 +700,7 @@ function textLines(data){
     `外箱内尺寸：${c.inner.join(" × ")} mm（${c.name}）`,
     `箱型信息：SKU ${c.sku||"-"} / 编码 ${c.code||"-"} / 材质 ${c.material||c.flute}`,
     c.has_existing_foam?`原表配套珍珠棉：${c.foam_note||"有配套珍珠棉备注"}`:"原表配套珍珠棉：无",
-    `内盒尺寸：${data.box.dims.join(" × ")} mm`,
+    `内盒尺寸：${l.orientation.join(" × ")} mm${l.rotation===90?"（90°长宽互换）":""}`,
     `内盒朝向：${l.orientation.join(" × ")} mm`,
     `排列方式：${l.counts.join(" × ")} = ${l.quantity} 个/箱`,
     `空间利用率：${(l.utilization*100).toFixed(2)}%`
@@ -794,7 +794,7 @@ function pdfTextLines(data){
     pdfLine(`外箱：${cartonPrimaryText(c)}（内尺寸 ${c.inner.join(" × ")} mm）`,true),
     pdfLine(`箱型信息：SKU ${c.sku||"-"} / 编码 ${c.code||"-"} / 材质 ${c.material||c.flute}`),
     pdfLine(c.has_existing_foam?`原表配套珍珠棉：${c.foam_note||"有配套珍珠棉备注"}`:"原表配套珍珠棉：无"),
-    pdfLine(`内盒尺寸：${data.box.dims.join(" × ")} mm`)
+    pdfLine(`内盒尺寸：${l.orientation.join(" × ")} mm${l.rotation===90?"（90°长宽互换）":""}`)
   ];
   if(hasMixed){
     lines.push(
@@ -805,7 +805,7 @@ function pdfTextLines(data){
   }else{
     const rotation=d.rotation90>0?"90°":"0°";
     lines.push(
-      pdfLine(`装箱模式：统一朝向平放（${rotation}）`,true),
+      pdfLine(`装箱模式：统一朝向平放（${rotation}${l.rotation===90?"，长宽互换":""}）`,true),
       pdfLine(`排列方式：长方向 ${grid.lengthCount} × 宽方向 ${grid.widthCount} × 高方向 ${grid.layers} = ${l.quantity} 个/箱`,true)
     );
   }
@@ -956,7 +956,7 @@ function excelTable(data){
   const {carton:c,layout:l}=data.best,rows=excelBomRows(data),headers=["物料类型","SKU","名称/方向","规格(mm)","数量","底数","单位","备注"];
   const summary=[
     ["外箱",`${c.sku||"-"} ${Array.isArray(c.outer)?c.outer.join("×"):"-"} ${c.material||c.flute||""}`],
-    ["内盒尺寸",`${data.box.dims.join("×")} mm`],
+    ["内盒尺寸",`${l.orientation.join("×")} mm${l.rotation===90?"（90°长宽互换）":""}`],
     ["装箱数量",`${l.quantity} 个/箱`],
     ["排列方式",`${modeText(l)}；${planLayoutSummary(l)}个`],
     ["朝向分布",orientationSummary(l)]
