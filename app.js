@@ -310,7 +310,6 @@ function innerBoxGuideSvg(){
     ${dim(wb[0],wb[1],wc[0],wc[1],"宽 w",(wb[0]+wc[0])/2+8,(wb[1]+wc[1])/2+18)}
     ${ext(p.c[0],p.c[1],hX,p.c[1])}${ext(p.g[0],p.g[1],hX,p.g[1])}
     ${dim(hX,p.c[1],hX,p.g[1],"高 h",hX+9,(p.c[1]+p.g[1])/2+5,"start")}
-    <text x="18" y="28" fill="#50677a" font-size="13" font-weight="700">${document.querySelector('input[name="packMode"]:checked')?.value==="knifeCard"?"产品尺寸方向":"销售内盒尺寸方向"}</text>
   </svg>`;
 }
 function renderInnerBoxGuide(){
