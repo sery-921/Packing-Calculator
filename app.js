@@ -16,6 +16,8 @@ const EPE_FACE_MAPS=window.EPE_FOAM_FACE_MAPS||{};
 const EPE_SKUS=window.EPE_FOAM_SKUS||{};
 let current=null;
 let plansExpanded=false;
+
+const KNIFE_CARD_KITS=Array.isArray(window.KNIFE_CARD_KITS)?window.KNIFE_CARD_KITS:[];
 let exportUrls=[];
 let exportGeneration=0;
 let preview3dRetryTimer=0;
@@ -32,6 +34,7 @@ const FOAM_MIN_COMPRESSED_MM=7;
 const FOAM_FRIENDLY_MAX_STEP_RATIO=2;
 const FOAM_CLOSURE_BONUS=600000;
 const PADDING_AXES=["length","width","height"];
+const ZERO_PADDING={margin:0,sheets:0,low:0,high:0,unfilled:0,compression:0,lowStack:0,highStack:0};
 
 function boardRule(raw,flute){
   const material=String(raw.material||raw.name||"").toUpperCase();
@@ -168,7 +171,89 @@ function layoutFor(c,box,opt){
   const uniformScore=layoutScore(uniform,opt);
   return mixedScore>uniformScore?mixed:uniform;
 }
+function cartonByCode(code){
+  const raw=COMMON.find(item=>String(item.code||"").toUpperCase()===String(code||"").toUpperCase());
+  if(!raw)throw new Error(`刀卡纸箱 ${code} 未在纸箱库中找到`);
+  return carton(raw);
+}
+function flatThickness(kit){
+  const v=Number(kit.flatCard?.size?.[2]);
+  if(Number.isFinite(v)&&v>0)return v;
+  const material=String(kit.flatCard?.material||"").toUpperCase();
+  if(material.includes("K3K"))return 2;
+  if(material.includes("K6K"))return 3;
+  return 0;
+}
+function flatCardCount(kit,layers){
+  if(kit.flatCard?.countMode==="ignored-for-c09-preview")return 0;
+  return Math.max(0,Number(layers)-1);
+}
+function projectedDims(productDims,axis,angleDeg){
+  const [L,W,H]=productDims.map(Number),rad=angleDeg*Math.PI/180;
+  const c=Math.cos(rad),s=Math.sin(rad);
+  if(axis==="length")return{length:L*c+H*s,width:W,height:H*c+L*s};
+  return{length:L,width:W*c+H*s,height:H*c+W*s};
+}
+function checkKnifePlacement(productDims,kit,axis,angleDeg,clearance,arrangement=[1,1,1]){
+  const [cellL,cellW,cellH]=kit.cell.map(Number),p=projectedDims(productDims,axis,angleDeg),a=arrangement.map(Number);
+  const reasons=[];
+  if(a[0]*(p.length+clearance)>cellL+1e-9)reasons.push(`长向投影 ${a[0]}×${(p.length+clearance).toFixed(1)}=${(a[0]*(p.length+clearance)).toFixed(1)}mm > 单格长 ${cellL}mm`);
+  if(a[1]*(p.width+clearance)>cellW+1e-9)reasons.push(`宽向投影 ${a[1]}×${(p.width+clearance).toFixed(1)}=${(a[1]*(p.width+clearance)).toFixed(1)}mm > 单格宽 ${cellW}mm`);
+  if(a[2]*p.height>cellH+1e-9)reasons.push(`倾斜后高度 ${a[2]}×${p.height.toFixed(1)}=${(a[2]*p.height).toFixed(1)}mm > 刀卡高 ${cellH}mm`);
+  return{ok:!reasons.length,axis,angle:angleDeg,projected:p,reasons};
+}
+function findKnifePlacement(productDims,kit,opt){
+  const clearance=Number(opt.knifeCellClearance)||0,step=Math.max(.1,Number(opt.knifeTiltStep)||.5),max=opt.knifeAutoTilt?Math.max(0,Number(opt.knifeMaxTilt)||0):0;
+  const arrangement=Array.isArray(opt.arrangement)?opt.arrangement:[1,1,1];
+  const axes=["width","length"];
+  for(let angle=0;angle<=max+1e-9;angle+=step){
+    for(const axis of axes){
+      const result=checkKnifePlacement(productDims,kit,axis,Math.round(angle*10)/10,clearance,arrangement);
+      if(result.ok)return result;
+    }
+  }
+  return null;
+}
+function buildKnifeBoxes(layout){
+  const [cellL,cellW,cellH]=layout.kit.cell.map(Number),[nx,ny,nz]=layout.counts,boxes=[],a=Array.isArray(layout.arrangement)?layout.arrangement:[1,1,1];
+  const subL=cellL/a[0],subW=cellW/a[1],subH=cellH/a[2];
+  for(let k=0;k<nz;k++)for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){
+    const ox=i*cellL,oy=j*cellW,oz=k*layout.layerPitch;
+    for(let cu=0;cu<a[2];cu++)for(let bu=0;bu<a[1];bu++)for(let au=0;au<a[0];au++){
+      boxes.push({index:boxes.length,x:ox+au*subL,y:oy+bu*subW,z:oz+cu*subH,length:subL,width:subW,height:subH,rotation:0});
+    }
+  }
+  return boxes;
+}
+function knifeLayoutForKit(kit,box,opt){
+  if(!kit.enabled)return null;
+  const packing=(opt.knifeAllowMultiPerCell!==false&&kit.cellPacking)?kit.cellPacking:null;
+  const arrangement=packing&&Array.isArray(packing.arrangement)&&packing.arrangement.length===3?packing.arrangement.map(Number):[1,1,1];
+  const units=Math.max(1,Math.round(arrangement[0]*arrangement[1]*arrangement[2]));
+  const placement=findKnifePlacement(box.dims,kit,{...opt,arrangement});
+  if(!placement)return null;
+  const c=cartonByCode(kit.cartonCode),counts=[Number(kit.cells[0]),Number(kit.cells[1]),Number(kit.layers)];
+  const flats=flatCardCount(kit,counts[2]),flatT=flatThickness(kit),usedH=counts[2]*Number(kit.cell[2])+flats*flatT;
+  if(usedH>c.inner[2]+1e-9)return null;
+  const usedL=counts[0]*Number(kit.cell[0]),usedW=counts[1]*Number(kit.cell[1]);
+  const residual=[Math.max(0,c.inner[0]-usedL),Math.max(0,c.inner[1]-usedW),Math.max(0,c.inner[2]-usedH)].map(v=>+v.toFixed(3));
+  const quantity=product(counts)*units,layout={mode:"knifeCard",kit,placement,orientation:kit.cell.slice(),counts,quantity,units,arrangement,padding:{length:{...ZERO_PADDING,margin:residual[0],unfilled:residual[0]},width:{...ZERO_PADDING,margin:residual[1],unfilled:residual[1]},height:{...ZERO_PADDING,margin:residual[2],unfilled:residual[2]}},foamTotal:0,flatCardCount:flats,flatCardThickness:flatT,usedHeight:usedH,layerPitch:Number(kit.cell[2])+flatT,areaUtilization:(counts[0]*counts[1]*units*box.dims[0]*box.dims[1])/(c.inner[0]*c.inner[1]),utilization:quantity*product(box.dims)/product(c.inner),totalWeight:quantity*box.weight+c.weight,cost:{packagingCost:0,costPerBox:0},orientationDistribution:{rotation0:quantity,rotation90:0},boxes:null,rotation:0};
+  // ensure residual is exposed on layout (padding above uses residual[2]); merge safety
+  layout.residual=residual;
+  layout.boxes=buildKnifeBoxes(layout);
+  return{carton:c,layout,ergonomics:{passed:c.outer.reduce((a,b)=>a+b,0)<=1200&&Math.max(...c.outer)<=800&&layout.totalWeight<=opt.maxWeight,dimSum:c.outer.reduce((a,b)=>a+b,0),longEdge:Math.max(...c.outer)}};
+}
+function collectKnifeCard(){
+  const box={dims:[value("innerL"),value("innerW"),value("innerH")],weight:value("innerWeight")};
+  if(Math.min(...box.dims)<=0)throw new Error("产品尺寸必须大于 0");
+  const opt={mode:"knifeCard",knifeAutoTilt:$("knifeAutoTilt")?.checked??true,knifeMaxTilt:value("knifeMaxTilt"),knifeCellClearance:value("knifeCellClearance"),knifeTiltStep:value("knifeTiltStep"),knifeAllowMultiPerCell:$("knifeAllowMultiPerCell")?.checked??true,maxWeight:value("maxWeight")};
+  const evaluated=KNIFE_CARD_KITS.map(kit=>knifeLayoutForKit(kit,box,opt)).filter(Boolean);
+  if(!evaluated.length)throw new Error("当前 C09/C10 刀卡库中没有可行方案；可尝试放宽最大倾斜角、减小入格余量，或用下方验证入口查看指定角度原因。");
+  evaluated.sort((a,b)=>b.layout.quantity-a.layout.quantity||a.layout.placement.angle-b.layout.placement.angle||product(a.carton.inner)-product(b.carton.inner));
+  return{box,opt,best:evaluated[0],alternatives:evaluated.slice(1,4),comparisonPlans:evaluated.slice(0,12),mode:"knife-card-selection"};
+}
 function collect(){
+  if(document.querySelector('input[name="packMode"]:checked')?.value==="knifeCard")return collectKnifeCard();
   const box={dims:[value("innerL"),value("innerW"),value("innerH")],weight:value("innerWeight")};
   if(Math.min(...box.dims)<=0)throw new Error("内盒尺寸必须大于0");
   const autoMode=$("autoMode").checked;
@@ -225,7 +310,7 @@ function innerBoxGuideSvg(){
     ${dim(wb[0],wb[1],wc[0],wc[1],"宽 w",(wb[0]+wc[0])/2+8,(wb[1]+wc[1])/2+18)}
     ${ext(p.c[0],p.c[1],hX,p.c[1])}${ext(p.g[0],p.g[1],hX,p.g[1])}
     ${dim(hX,p.c[1],hX,p.g[1],"高 h",hX+9,(p.c[1]+p.g[1])/2+5,"start")}
-    <text x="18" y="28" fill="#50677a" font-size="13" font-weight="700">销售内盒尺寸方向</text>
+    <text x="18" y="28" fill="#50677a" font-size="13" font-weight="700">${document.querySelector('input[name="packMode"]:checked')?.value==="knifeCard"?"产品尺寸方向":"销售内盒尺寸方向"}</text>
   </svg>`;
 }
 function renderInnerBoxGuide(){
@@ -555,7 +640,7 @@ function svgPreviewV4(data){
   const subtitle=esc(`\u5185\u76d2 ${l.orientation.join(" × ")} mm${l.rotation===90?"（90°长宽互换）":""} · \u73cd\u73e0\u68c9 ${totalFoam} \u7247`);
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 820" preserveAspectRatio="xMidYMid meet" role="img" aria-label="engineering preview"><defs><linearGradient id="bgV4" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fbfdff"/><stop offset="1" stop-color="#edf4fa"/></linearGradient><linearGradient id="pinkV4" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff8fc7"/><stop offset="1" stop-color="#df519e"/></linearGradient><linearGradient id="blueV4" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#aab2ff"/><stop offset="1" stop-color="#5c6fe2"/></linearGradient><linearGradient id="topV4" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff4b4"/><stop offset="1" stop-color="#ffd55e"/></linearGradient><pattern id="foamPatternV4" width="18" height="18" patternUnits="userSpaceOnUse"><rect width="18" height="18" fill="#c9eee6"/><path d="M0 9H18M9 0V18" stroke="#f9fffd" stroke-width="1"/><circle cx="4.5" cy="4.5" r="1.15" fill="#fff" opacity=".72"/></pattern><filter id="shadowV4" x="-25%" y="-25%" width="150%" height="150%"><feDropShadow dx="0" dy="11" stdDeviation="11" flood-color="#14324d" flood-opacity=".16"/></filter><style>.foamV4,.innerBlockV4,.cartonV4{filter:url(#shadowV4)}.foamPanelV4{fill:url(#foamPatternV4);stroke:#277c6e;stroke-width:2}.innerPinkV4{fill:url(#pinkV4);stroke:#153c60;stroke-width:2}.innerBlueV4{fill:url(#blueV4);stroke:#153c60;stroke-width:2}.innerTopV4{fill:url(#topV4);stroke:#153c60;stroke-width:2}.gridV4{stroke:#153c60;stroke-width:1.55;fill:none}.flapV4{fill:#deb777;stroke:#765335;stroke-width:1.9}.cartonInsideV4{fill:#bf8e55;fill-opacity:.45;stroke:#765335;stroke-width:1.8}.cartonLeftV4{fill:#d1a46e;stroke:#765335;stroke-width:1.9}.cartonRightV4{fill:#a87849;stroke:#765335;stroke-width:1.9}.cartonRimV4{fill:none;stroke:#65452c;stroke-width:2.2}.badgeV4 rect{fill:#fcfffd;stroke:#3b9876;stroke-width:1.5}.badgeV4 text{font:700 16px "Microsoft YaHei",Arial,sans-serif;fill:#087146}.footerV4 rect{fill:#fff;stroke:#d5e0e8}.footerV4 text{font:700 25px "Microsoft YaHei",Arial,sans-serif;fill:#102b45}</style></defs><rect width="1120" height="820" rx="28" fill="url(#bgV4)"/>${carton}${faces.map(panel).join("")}${block}<g class="footerV4"><rect x="268" y="752" width="584" height="50" rx="12"/><text x="560" y="785" text-anchor="middle">${txt.assembly}: ${txt.length} ${nx} ${xMark} ${txt.width} ${ny} ${xMark} ${txt.height} ${nz} = ${l.quantity} pcs</text></g></svg>`;
 }
-function report(data){const {carton:c,layout:l}=data.best,p=l.padding,d=l.orientationDistribution||{rotation0:0,rotation90:0},foamLine=c.has_existing_foam?`- 原表配套珍珠棉：${c.foam_note||"有配套珍珠棉备注"}\n`:"",mode=l.mode==="mixedOrientationFlat"?"平放长宽混排":"统一朝向网格";return`## 输入参数
+function report(data){if(data.best.layout.mode==="knifeCard")return knifeReport(data);const {carton:c,layout:l}=data.best,p=l.padding,d=l.orientationDistribution||{rotation0:0,rotation90:0},foamLine=c.has_existing_foam?`- 原表配套珍珠棉：${c.foam_note||"有配套珍珠棉备注"}\n`:"",mode=l.mode==="mixedOrientationFlat"?"平放长宽混排":"统一朝向网格";return`## 输入参数
 - 外箱内尺寸：长${c.inner[0]}×宽${c.inner[1]}×高${c.inner[2]} mm
 - 推荐箱型：${c.name}
 - 箱型信息：SKU ${c.sku||"-"}；编码 ${c.code||"-"}；材质 ${c.material||c.flute}
@@ -639,10 +724,71 @@ function foamSpec(c,axis){
   const face=rec&&rec.face_label?rec.face_label:axis==="length"?"左/右":axis==="width"?"前/后":"上/下";
   return{code,size,face};
 }
+function knifeCardSummary(l){const p=l.placement,axis=p.axis==="length"?"沿长向":"沿宽向";return p.angle>0?`${axis}倾斜 ${p.angle.toFixed(1)}°`:"直放"}
+function knifeReport(data){
+  const {carton:c,layout:l}=data.best,kit=l.kit,p=l.placement;
+  return`## 刀卡装箱方案
+- 模式：裸产品 + 刀卡（不放珍珠棉）
+- 纸箱：${c.code} / ${c.sku||"-"} / 外尺寸 ${c.outer.join("×")} mm / 内尺寸 ${c.inner.join("×")} mm
+- 刀卡方案：${kit.label}
+- 产品尺寸：${data.box.dims.join("×")} mm
+- 单格容量：${kit.cell.join("×")} mm
+- 每格产品数：${l.units||1} 件${(l.units||1)>1?"（"+l.arrangement.join("×")+"）":""}
+- 排布：长向 ${l.counts[0]} × 宽向 ${l.counts[1]} × 高向 ${l.counts[2]} = ${l.quantity} pcs
+- 放置：${knifeCardSummary(l)}；投影 ${p.projected.length.toFixed(1)}×${p.projected.width.toFixed(1)}×${p.projected.height.toFixed(1)} mm
+- 平卡：${kit.flatCard?.sku||"-"} / ${l.flatCardCount} 片 / 厚度 ${l.flatCardThickness} mm
+- 六面余量：长 ${l.residual[0]} mm，宽 ${l.residual[1]} mm，高 ${l.residual[2]} mm
+- 备注：${(kit.notes||[]).join("；")||"无"}
+
+## BOM
+- 纸箱：${c.code} × 1
+- 刀卡：${kit.cards.map(card=>`${card.sku} ${card.name}`).join("；")}
+- 平卡：${kit.flatCard?.sku||"-"} × ${l.flatCardCount}
+`;
+}
+function svgKnifePreview(data){
+  const {carton:c,layout:l}=data.best,kit=l.kit,[nx,ny,nz]=l.counts,[cellL,cellW,cellH]=kit.cell;
+  const xMark="×",scale=Math.min(760/(nx*cellL),360/(ny*cellW)),ox=72,oy=118,sideY=560,sideScale=Math.min(760/(nx*cellL),260/(c.inner[2]));
+  const rect=(x,y,w,h,cls)=>`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" class="${cls}"/>`;
+  let top="",side="";
+  top+=rect(ox,oy,nx*cellL*scale,ny*cellW*scale,"carton");
+  for(let i=1;i<nx;i++)top+=`<line x1="${(ox+i*cellL*scale).toFixed(1)}" y1="${oy}" x2="${(ox+i*cellL*scale).toFixed(1)}" y2="${(oy+ny*cellW*scale).toFixed(1)}" class="knifeA"/>`;
+  for(let j=1;j<ny;j++)top+=`<line x1="${ox}" y1="${(oy+j*cellW*scale).toFixed(1)}" x2="${(ox+nx*cellL*scale).toFixed(1)}" y2="${(oy+j*cellW*scale).toFixed(1)}" class="knifeB"/>`;
+  const arr=Array.isArray(l.arrangement)?l.arrangement:[1,1,1],subL=cellL*scale/arr[0],subW=cellW*scale/arr[1];
+  for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){const cx=ox+i*cellL*scale,cy=oy+j*cellW*scale;for(let bu=0;bu<arr[1];bu++)for(let au=0;au<arr[0];au++)top+=rect(cx+au*subL+1,cy+bu*subW+1,Math.max(1,subL-2),Math.max(1,subW-2),"product");}
+  side+=rect(ox,sideY,nx*cellL*sideScale,c.inner[2]*sideScale,"carton");
+  for(let k=0;k<nz;k++){
+    const y=sideY+c.inner[2]*sideScale-(k*Number(l.layerPitch)+cellH)*sideScale;
+    for(let i=0;i<nx;i++)side+=rect(ox+i*cellL*sideScale+1,y,Math.max(1,cellL*sideScale-2),cellH*sideScale,"productSide");
+    if(k<nz-1&&l.flatCardCount>0){
+      const fy=sideY+c.inner[2]*sideScale-(k*Number(l.layerPitch)+cellH+l.flatCardThickness)*sideScale;
+      side+=rect(ox,fy,nx*cellL*sideScale,l.flatCardThickness*sideScale,"flat");
+    }
+  }
+  const cards=kit.cards.map(card=>`${card.role}: ${card.sku} ${card.size.join(xMark)}mm`).join(" / ");
+  return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 900" role="img" aria-label="knife card preview"><defs><style>text{font-family:"Microsoft YaHei",Arial,sans-serif}.title{font-size:25px;font-weight:800;fill:#10283e}.sub{font-size:16px;fill:#51697d}.carton{fill:#fff8ec;stroke:#765335;stroke-width:2}.knifeA{stroke:#174f91;stroke-width:2}.knifeB{stroke:#a85e1f;stroke-width:2}.product{fill:#f3a35d;stroke:#8f4d18;stroke-width:1}.productSide{fill:#efb06f;stroke:#8f4d18;stroke-width:1}.flat{fill:#d7e5ef;stroke:#58718a;stroke-width:1.4}.label{font-size:15px;font-weight:700;fill:#17324d}.note{font-size:13px;fill:#657989}</style></defs><rect width="1120" height="900" rx="28" fill="#f4f7fb"/><text class="title" x="48" y="52">${kit.label} · ${c.code} · ${l.quantity} pcs</text><text class="sub" x="48" y="82">裸产品+刀卡，不放珍珠棉 · ${knifeCardSummary(l)} · 单格 ${kit.cell.join(xMark)} mm${(l.units||1)>1?` · 每格 ${l.units} 件`:``}</text><text class="label" x="48" y="108">俯视图：${nx} ${xMark} ${ny} / 每层 ${nx*ny*(l.units||1)} pcs</text>${top}<text class="label" x="48" y="540">侧视图：${nz} 层，平卡 ${l.flatCardCount} 片，高向余量 ${l.residual[2]} mm</text>${side}<text class="label" x="48" y="850">${cards}</text><text class="note" x="48" y="875">平卡：${kit.flatCard?.sku||"-"} ${kit.flatCard?.size?.join(xMark)||"-"}mm；六面余量 ${l.residual.join(xMark)} mm</text></svg>`;
+}
+function dxfKnife(data){
+  const {carton:c,layout:l}=data.best,kit=l.kit,[cl,cw,ch]=c.inner,[cellL,cellW,cellH]=kit.cell,[nx,ny,nz]=l.counts,ents=[];
+  const clean=v=>String(v).replace(/[^\x20-\x7e]/g," ").replace(/\s+/g," ").trim(),add=a=>ents.push(...a.map(String));
+  const line=(x1,y1,x2,y2,layer="OBJECT")=>add(["0","LINE","8",layer,"10",x1.toFixed(3),"20",y1.toFixed(3),"30","0","11",x2.toFixed(3),"21",y2.toFixed(3),"31","0"]);
+  const text=(x,y,h,v)=>add(["0","TEXT","8","TEXT","10",x.toFixed(3),"20",y.toFixed(3),"30","0","40",h.toFixed(3),"1",clean(v)]);
+  const rect=(x,y,w,h,layer)=>{line(x,y,x+w,y,layer);line(x+w,y,x+w,y+h,layer);line(x+w,y+h,x,y+h,layer);line(x,y+h,x,y,layer)};
+  const ox=40,oy=90,sy=oy+cw+80;
+  text(ox,30,8,"KNIFE CARD PACKING DRAWING");text(ox,46,5,`CARTON ${c.code} KIT ${kit.id} GRID ${nx}x${ny}x${nz}=${l.quantity}pcs NO EPE`);
+  rect(ox,oy,cl,cw,"CARTON");
+  for(let i=1;i<nx;i++)line(ox+i*cellL,oy,ox+i*cellL,oy+ny*cellW,"KNIFE_CARD_A");
+  for(let j=1;j<ny;j++)line(ox,oy+j*cellW,ox+nx*cellL,oy+j*cellW,"KNIFE_CARD_B");
+  const xarr=Array.isArray(l.arrangement)?l.arrangement:[1,1,1],xsubL=cellL/xarr[0],xsubW=cellW/xarr[1];for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){const xcx=ox+i*cellL,xcy=oy+j*cellW;for(let bu=0;bu<xarr[1];bu++)for(let au=0;au<xarr[0];au++)rect(xcx+au*xsubL,xcy+bu*xsubW,xsubL,xsubW,"PRODUCT");}
+  text(ox,sy-12,5,"SIDE VIEW");rect(ox,sy,cl,ch,"CARTON");
+  for(let k=0;k<nz;k++){const z=sy+k*l.layerPitch;rect(ox,z,nx*cellL,cellH,"PRODUCT");if(k<nz-1&&l.flatCardCount>0)rect(ox,z+cellH,nx*cellL,l.flatCardThickness,"FLAT_CARD")}
+  return dxfWrap(ents,ox+cl+220,sy+ch+80);
+}
 function dxf(data){const {carton:c,layout:l}=data.best,p=l.padding,[cl,cw,ch]=c.inner,[ol,ow,oh]=c.outer,[bl,bw,bh]=l.orientation,[nl,nw,nh]=l.counts,ents=[];const clean=v=>String(v).replace(/[^\x20-\x7e]/g," ").replace(/\s+/g," ").trim();const add=a=>ents.push(...a.map(v=>String(v)));const line=(x1,y1,x2,y2,layer="OBJECT")=>add(["0","LINE","8",layer,"10",x1.toFixed(3),"20",y1.toFixed(3),"30","0","11",x2.toFixed(3),"21",y2.toFixed(3),"31","0"]);const text=(x,y,h,v)=>add(["0","TEXT","8","TEXT","10",x.toFixed(3),"20",y.toFixed(3),"30","0","40",h.toFixed(3),"1",clean(v)]);const rect=(x,y,w,h,layer="OBJECT")=>{line(x,y,x+w,y,layer);line(x+w,y,x+w,y+h,layer);line(x+w,y+h,x,y+h,layer);line(x,y+h,x,y,layer)};const ox=40,oy=80,sy=oy+cw+80;const code=(axis)=>clean(codeText(c,axis).replace(/[（）]/g,""));text(ox,30,8,"CARTON PACKING DRAWING");text(ox,45,5,`CARTON SKU ${c.sku||"-"} CODE ${c.code||"-"} OUT ${ol}x${ow}x${oh}mm IN ${cl}x${cw}x${ch}mm`);text(ox,55,5,`INNER ${data.box.dims.join("x")}mm GRID ${nl}x${nw}x${nh}=${l.quantity}pcs/carton EPE ${data.opt.foamT}mm`);text(ox,65,5,`BOM CARTON 1pcs LR ${p.length.sheets}pcs ${code("length")} FB ${p.width.sheets}pcs ${code("width")} TB ${p.height.sheets}pcs ${code("height")}`);text(ox,oy-12,5,"TOP VIEW");rect(ox,oy,cl,cw,"CARTON");const x0=ox+p.length.lowStack+p.length.unfilled/2,y0=oy+p.width.lowStack+p.width.unfilled/2;for(let j=0;j<nw;j++)for(let i=0;i<nl;i++)rect(x0+i*bl,y0+j*bw,bl,bw,"INNER_BOX");if(p.length.lowStack)rect(ox,oy,p.length.lowStack,cw,"FOAM");if(p.length.highStack)rect(ox+cl-p.length.highStack,oy,p.length.highStack,cw,"FOAM");if(p.width.lowStack)rect(ox,oy,cl,p.width.lowStack,"FOAM");if(p.width.highStack)rect(ox,oy+cw-p.width.highStack,cl,p.width.highStack,"FOAM");text(ox+cl+20,oy+cw-10,5,`LEFT ${p.length.low}pcs / RIGHT ${p.length.high}pcs EPE ${code("length")}`);text(ox+cl+20,oy+cw-20,5,`FRONT ${p.width.low}pcs / BACK ${p.width.high}pcs EPE ${code("width")}`);text(ox,sy-12,5,"SIDE VIEW");rect(ox,sy,cl,ch,"CARTON");const sx0=ox+p.length.lowStack+p.length.unfilled/2,sz0=sy+p.height.lowStack+p.height.unfilled/2;for(let k=0;k<nh;k++)for(let i=0;i<nl;i++)rect(sx0+i*bl,sz0+k*bh,bl,bh,"INNER_BOX");if(p.height.lowStack)rect(ox,sy,cl,p.height.lowStack,"FOAM");if(p.height.highStack)rect(ox,sy+ch-p.height.highStack,cl,p.height.highStack,"FOAM");text(ox+cl+20,sy+ch-10,5,`BOTTOM ${p.height.low}pcs / TOP ${p.height.high}pcs EPE ${code("height")}`);const maxX=ox+cl+260,maxY=sy+ch+90;return["0","SECTION","2","HEADER","9","$ACADVER","1","AC1009","9","$EXTMIN","10","0","20","0","30","0","9","$EXTMAX","10",maxX.toFixed(3),"20",maxY.toFixed(3),"30","0","0","ENDSEC","0","SECTION","2","TABLES","0","TABLE","2","LTYPE","70","1","0","LTYPE","2","CONTINUOUS","70","0","3","Solid line","72","65","73","0","40","0.0","0","ENDTAB","0","TABLE","2","LAYER","70","5","0","LAYER","2","0","70","0","62","7","6","CONTINUOUS","0","LAYER","2","CARTON","70","0","62","5","6","CONTINUOUS","0","LAYER","2","INNER_BOX","70","0","62","3","6","CONTINUOUS","0","LAYER","2","FOAM","70","0","62","2","6","CONTINUOUS","0","LAYER","2","TEXT","70","0","62","7","6","CONTINUOUS","0","ENDTAB","0","ENDSEC","0","SECTION","2","ENTITIES",...ents,"0","ENDSEC","0","EOF",""].join("\r\n")}
 function dxf(data){
   const {carton:c,layout:l}=data.best,p=l.padding,[cl,cw,ch]=c.inner,[ol,ow,oh]=c.outer,[bl,bw,bh]=l.orientation,[nl,nw,nh]=l.counts,ents=[];
   const clean=v=>String(v).replace(/[^\x20-\x7e]/g," ").replace(/\s+/g," ").trim();
+  if(data.best.layout.mode==="knifeCard")return dxfKnife(data);
   const add=a=>ents.push(...a.map(v=>String(v)));
   const line=(x1,y1,x2,y2,layer="OBJECT")=>add(["0","LINE","8",layer,"10",x1.toFixed(3),"20",y1.toFixed(3),"30","0","11",x2.toFixed(3),"21",y2.toFixed(3),"31","0"]);
   const text=(x,y,h,v)=>add(["0","TEXT","8","TEXT","10",x.toFixed(3),"20",y.toFixed(3),"30","0","40",h.toFixed(3),"1",clean(v)]);
@@ -788,6 +934,18 @@ function mixedSideViews(l,c,p){
 function pdfLine(text,bold=false){return{text,bold}}
 function pdfTextLines(data){
   const {carton:c,layout:l}=data.best,d=l.orientationDistribution||{rotation0:0,rotation90:0};
+  if(l.mode==="knifeCard")return[
+    pdfLine("刀卡装箱方案"),
+    pdfLine(`外箱：${cartonPrimaryText(c)}（内尺寸 ${c.inner.join(" × ")} mm）`,true),
+    pdfLine("装箱模式：裸产品 + 刀卡（不放珍珠棉）",true),
+    pdfLine(`刀卡方案：${l.kit.label}`),
+pdfLine(`每格产品数：${l.units||1} 件${(l.units||1)>1?"（"+l.arrangement.join("×")+"）":""}`),
+    pdfLine(`产品尺寸：${data.box.dims.join(" × ")} mm；单格 ${l.kit.cell.join(" × ")} mm`),
+    pdfLine(`排布：长向 ${l.counts[0]} × 宽向 ${l.counts[1]} × 高向 ${l.counts[2]} = ${l.quantity} 个/箱`,true),
+    pdfLine(`放置：${knifeCardSummary(l)}；投影 ${l.placement.projected.length.toFixed(1)} × ${l.placement.projected.width.toFixed(1)} × ${l.placement.projected.height.toFixed(1)} mm`),
+    pdfLine(`平卡：${l.kit.flatCard?.sku||"-"}，${l.flatCardCount} 片，厚度 ${l.flatCardThickness} mm`),
+    pdfLine(`六面余量：长 ${l.residual[0]} mm，宽 ${l.residual[1]} mm，高 ${l.residual[2]} mm`)
+  ];
   const grid=layerGridInfo(l),hasMixed=d.rotation0>0&&d.rotation90>0;
   const lines=[
     pdfLine("包装装箱优化方案"),
@@ -868,7 +1026,31 @@ function drawMixedDrawing(ctx,data,x,y,w,h){
   legend("下/上珍珠棉",[`${p.height.low} / ${p.height.high} 片`,`${foamSpec(c,"height").code}`,`${foamSpec(c,"height").size} mm`],y+h*.56);
   ctx.restore();
 }
+function drawKnifeDrawing(ctx,data,x,y,w,h){
+  const {carton:c,layout:l}=data.best,kit=l.kit,[cl,cw,ch]=c.inner,[cellL,cellW,cellH]=kit.cell,[nx,ny,nz]=l.counts;
+  const scale=Math.min((w*.58)/(nx*cellL),(h*.38)/(ny*cellW)),ox=x+20,oy=y+55,sy=y+h*.58,sideScale=Math.min((w*.58)/(nx*cellL),(h*.34)/ch),legendX=x+w*.64,legendW=x+w-legendX-18;
+  ctx.save();ctx.strokeStyle="#1f3c56";ctx.lineWidth=2;ctx.fillStyle="#1f3c56";ctx.font='22px "Microsoft YaHei",sans-serif';ctx.fillText("刀卡装箱图纸预览",x+20,y+28);
+  const rect=(rx,ry,rw,rh,fill,stroke="#1f3c56")=>{if(fill){ctx.fillStyle=fill;ctx.fillRect(rx,ry,rw,rh)}ctx.strokeStyle=stroke;ctx.strokeRect(rx,ry,rw,rh)};
+  ctx.font='16px "Microsoft YaHei",sans-serif';ctx.fillStyle="#1f3c56";ctx.fillText("俯视图",ox,oy-12);
+  rect(ox,oy,nx*cellL*scale,ny*cellW*scale,null);
+  for(let i=1;i<nx;i++){ctx.strokeStyle="#174f91";ctx.beginPath();ctx.moveTo(ox+i*cellL*scale,oy);ctx.lineTo(ox+i*cellL*scale,oy+ny*cellW*scale);ctx.stroke()}
+  for(let j=1;j<ny;j++){ctx.strokeStyle="#a85e1f";ctx.beginPath();ctx.moveTo(ox,oy+j*cellW*scale);ctx.lineTo(ox+nx*cellL*scale,oy+j*cellW*scale);ctx.stroke()}
+  const karr=Array.isArray(l.arrangement)?l.arrangement:[1,1,1],ksubL=cellL*scale/karr[0],ksubW=cellW*scale/karr[1];for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){const kcx=ox+i*cellL*scale,kcy=oy+j*cellW*scale;for(let bu=0;bu<karr[1];bu++)for(let au=0;au<karr[0];au++)rect(kcx+au*ksubL+1,kcy+bu*ksubW+1,Math.max(1,ksubL-2),Math.max(1,ksubW-2),"rgba(243,163,93,.52)","#8f4d18");}
+  ctx.fillStyle="#1f3c56";ctx.font='16px "Microsoft YaHei",sans-serif';ctx.fillText("侧视图",ox,sy-12);
+  rect(ox,sy,nx*cellL*sideScale,ch*sideScale,null);
+  for(let k=0;k<nz;k++){
+    const yy=sy+ch*sideScale-(k*l.layerPitch+cellH)*sideScale;
+    for(let i=0;i<nx;i++)rect(ox+i*cellL*sideScale+1,yy,Math.max(1,cellL*sideScale-2),cellH*sideScale,"rgba(239,176,111,.55)","#8f4d18");
+    if(k<nz-1&&l.flatCardCount>0)rect(ox,yy-cellH*0+l.flatCardThickness*0+cellH*sideScale,nx*cellL*sideScale,l.flatCardThickness*sideScale,"rgba(215,229,239,.85)","#58718a");
+  }
+  const legend=(title,lines,ly)=>{ctx.fillStyle="#17324d";ctx.font='700 22px "Microsoft YaHei",sans-serif';ctx.fillText(title,legendX,ly);ctx.fillStyle="#34495e";ctx.font='18px "Microsoft YaHei",sans-serif';lines.forEach((line,i)=>wrapCanvasText(ctx,line,legendX,ly+30+i*26,legendW,24))};
+  legend("方案信息",[`${kit.label} / ${l.quantity} pcs`,`单格 ${kit.cell.join("×")} mm`,knifeCardSummary(l)],oy+8);
+  legend("辅材",[...kit.cards.map(card=>`${card.role}: ${card.sku}`),`平卡 ${kit.flatCard?.sku||"-"} × ${l.flatCardCount}`],oy+150);
+  legend("余量",[`${l.residual.join(" × ")} mm`,"刀卡方案不放珍珠棉"],sy+8);
+  ctx.restore();
+}
 function drawDrawing(ctx,data,x,y,w,h){
+  if(data.best.layout.mode==="knifeCard")return drawKnifeDrawing(ctx,data,x,y,w,h);
   if(data.best.layout.mode==="mixedOrientationFlat")return drawMixedDrawing(ctx,data,x,y,w,h);
   const {carton:c,layout:l}=data.best,p=l.padding,[cl,cw,ch]=c.inner,[bl,bw,bh]=l.orientation,[nl,nw,nh]=l.counts;
   const scale=Math.min((w*.50)/cl,(h*.46)/cw,(h*.36)/ch),ox=x+20,oy=y+55,sy=y+h*.58;
@@ -932,6 +1114,14 @@ function selectedColorBoxRow(){
   return{type:"彩盒",sku:box.sku||box.code||"",name:box.name||"通用飞机盒",size:box.outer.join("×"),qty:1,base:1,unit:"个",note:[box.code&&box.code!=="*" ? `编码 ${box.code}`:"",box.material?`材质 ${box.material}`:"",box.logo,box.note].filter(Boolean).join("；")};
 }
 function excelBomRows(data){
+  if(data.best.layout.mode==="knifeCard"){
+    const {carton:c,layout:l}=data.best,kit=l.kit,base=l.quantity;
+    return[
+      {type:"纸箱",sku:c.sku||c.code||"",name:c.name||"包装箱",size:Array.isArray(c.outer)?c.outer.join("×"):"",qty:1,base,unit:"个",note:`内尺寸 ${c.inner.join("×")} mm`},
+      ...kit.cards.map(card=>({type:"刀卡",sku:card.sku,name:card.name,size:card.size.join("×"),qty:1,base,unit:"套",note:`${kit.label} ${card.role}`})),
+      {type:"平卡",sku:kit.flatCard?.sku||"",name:kit.flatCard?.name||"平卡",size:Array.isArray(kit.flatCard?.size)?kit.flatCard.size.join("×"):"",qty:l.flatCardCount,base,unit:"片",note:`厚度 ${l.flatCardThickness}mm`}
+    ].filter(row=>row.qty>0);
+  }
   const {carton:c,layout:l}=data.best,p=l.padding,base=l.quantity,rows=[
     {type:"纸箱",sku:c.sku||c.code||"",name:c.name||"包装箱",size:Array.isArray(c.outer)?c.outer.join("×"):"",qty:1,base,unit:"个",note:`内尺寸 ${c.inner.join("×")} mm`}
   ];
@@ -954,7 +1144,15 @@ function excelBomRows(data){
 }
 function excelTable(data){
   const {carton:c,layout:l}=data.best,rows=excelBomRows(data),headers=["物料类型","SKU","名称/方向","规格(mm)","数量","底数","单位","备注"];
-  const summary=[
+  const summary=l.mode==="knifeCard"?[
+    ["模式","裸产品 + 刀卡"],
+    ["外箱",`${c.sku||"-"} ${Array.isArray(c.outer)?c.outer.join("×"):"-"} ${c.material||c.flute||""}`],
+    ["产品尺寸",`${data.box.dims.join("×")} mm`],
+    ["刀卡方案",`${l.kit.label}`],
+    ["每格产品数",`${l.units||1} 件${(l.units||1)>1?"（"+l.arrangement.join("×")+"）":""}`],
+    ["装箱数量",`${l.quantity} 个/箱`],
+    ["放置方式",knifeCardSummary(l)]
+  ]:[
     ["外箱",`${c.sku||"-"} ${Array.isArray(c.outer)?c.outer.join("×"):"-"} ${c.material||c.flute||""}`],
     ["内盒尺寸",`${l.orientation.join("×")} mm${l.rotation===90?"（90°长宽互换）":""}`],
     ["装箱数量",`${l.quantity} 个/箱`],
@@ -1045,6 +1243,11 @@ function buildPreviewFoams(data){
 function withPreviewFoams(data){return{...data,previewFoams:buildPreviewFoams(data)}}
 function renderEngineeringPreview(previewData){
   const mount=$("preview");
+  if(previewData.best.layout.mode==="knifeCard"){
+    mount.classList.remove("preview-3d");
+    mount.innerHTML=svgKnifePreview(previewData);
+    return;
+  }
   if(window.renderPacking3D){window.renderPacking3D(previewData,mount);return}
   mount.classList.remove("preview-3d");
   mount.innerHTML=svgPreviewV4(previewData);
@@ -1072,7 +1275,16 @@ function paddingPackingSummary(l){
   if(isTrueMixedFlat(l))return`${base} · ${orientationSummary(l)} · 较统一 ${l.improvement>0?`+${l.improvement}`:l.improvement||0}个${evalText}`;
   const counts=displayGridCounts(l);return`${base} · 统一朝向平放 ${l.quantity}个 长${counts[0]}*宽${counts[1]}*高${counts[2]}${evalText}`
 }
-function planCard(item,i,selectedKey){const c=item.carton,l=item.layout,e=item.ergonomics,foam=c.has_existing_foam?"配套珍珠棉":"无原表棉",risk=e.passed?"人体工学通过":"超建议需确认",improve=l.improvement>0?` · 较统一 +${l.improvement}`:"",tags=evaluationTags(l),tagLine=tags?`<span class="plan-card-tags">${tags}</span>`:"";return`<button class="plan-card ${planKey(item)===selectedKey?"selected":""}" data-plan="${i}"><strong>${i+1}. ${esc(c.code&&c.code!=="*" ? c.code : c.sku||"箱型")} · ${modeText(l)} · ${planLayoutSummary(l)}个</strong><span>${esc(c.name)} · 内尺寸 ${c.inner.join("×")} mm</span>${tagLine}<em>体积 ${(l.utilization*100).toFixed(2)}% · 底面 ${((l.areaUtilization||0)*100).toFixed(2)}% · ${orientationSummary(l)} · 余量 ${l.residual.join("×")}mm${improve} · ${evaluationSummary(l)} · ${foam} · ${risk}</em></button>`}
+function planCard(item,i,selectedKey){
+  const c=item.carton,l=item.layout,e=item.ergonomics;
+  if(l.mode==="knifeCard"){
+    const risk=e.passed?"人体工学通过":"超建议需确认";
+    const notes=(l.kit.notes||[]).length?` · 备注 ${esc(l.kit.notes[0])}`:"";
+    return`<button class="plan-card ${planKey(item)===selectedKey?"selected":""}" data-plan="${i}"><strong>${i+1}. ${esc(l.kit.label)} · ${l.counts.join("×")} = ${l.quantity}个</strong><span>${esc(c.name)} · 单格 ${l.kit.cell.join("×")} mm · ${knifeCardSummary(l)}</span><em>体积 ${(l.utilization*100).toFixed(2)}% · 平卡 ${l.flatCardCount}片 · 余量 ${l.residual.join("×")}mm · 不放珍珠棉 · ${risk}${notes}</em></button>`;
+  }
+  const foam=c.has_existing_foam?"配套珍珠棉":"无原表棉",risk=e.passed?"人体工学通过":"超建议需确认",improve=l.improvement>0?` · 较统一 +${l.improvement}`:"",tags=evaluationTags(l),tagLine=tags?`<span class="plan-card-tags">${tags}</span>`:"";
+  return`<button class="plan-card ${planKey(item)===selectedKey?"selected":""}" data-plan="${i}"><strong>${i+1}. ${esc(c.code&&c.code!=="*" ? c.code : c.sku||"箱型")} · ${modeText(l)} · ${planLayoutSummary(l)}个</strong><span>${esc(c.name)} · 内尺寸 ${c.inner.join("×")} mm</span>${tagLine}<em>体积 ${(l.utilization*100).toFixed(2)}% · 底面 ${((l.areaUtilization||0)*100).toFixed(2)}% · ${orientationSummary(l)} · 余量 ${l.residual.join("×")}mm${improve} · ${evaluationSummary(l)} · ${foam} · ${risk}</em></button>`;
+}
 function renderPlanList(previewData,selectedKey){
   const plans=previewData.comparisonPlans;
   const selectedIndex=plans.findIndex(item=>planKey(item)===selectedKey);
@@ -1094,6 +1306,26 @@ function render(data,resetPlanDisclosure=false){
   if(resetPlanDisclosure)plansExpanded=false;
   const previewData=withPreviewFoams(data);current=previewData;
   const {carton:c,layout:l}=previewData.best,p=l.padding,selectedKey=planKey(previewData.best);
+  if(l.mode==="knifeCard"){
+    $("results").hidden=false;
+    $("countGrid").textContent=`${l.counts.join("×")}=${l.quantity}`;
+    $("quantity").textContent=l.quantity;
+    $("orientationText").textContent=`${l.kit.label} · ${knifeCardSummary(l)} · ${c.name}`;
+    $("utilization").textContent=`${(l.utilization*100).toFixed(2)}%`;
+    $("totalWeight").textContent=`${l.totalWeight.toFixed(2)} kg${previewData.best.ergonomics&&!previewData.best.ergonomics.passed?" · 超建议":""}`;
+    $("foamTotal").textContent=`${l.flatCardCount} 片平卡`;
+    renderEngineeringPreview(previewData);
+    renderPdfPreview(previewData);
+    $("paddingTable").innerHTML=[
+      ["长向余量",`${l.residual[0]} mm`,"不放珍珠棉"],
+      ["宽向余量",`${l.residual[1]} mm`,"不放珍珠棉"],
+      ["高向余量",`${l.residual[2]} mm`,`平卡 ${l.flatCardCount} 片`],
+      ["放置方式",knifeCardSummary(l),`投影 ${l.placement.projected.length.toFixed(1)}×${l.placement.projected.width.toFixed(1)}×${l.placement.projected.height.toFixed(1)} mm`]
+    ].map(([axis,main,note])=>`<div class="padding-row"><strong>${axis}</strong><span>${main}</span><em>${note}</em></div>`).join("");
+    renderPlanList(previewData,selectedKey);
+    $("results").scrollIntoView({behavior:"smooth",block:"start"});
+    return;
+  }
   $("results").hidden=false;
   $("countGrid").textContent=layoutSummary(l);$("quantity").textContent=l.quantity;
   $("orientationText").textContent=`${modeText(l)} · ${orientationSummary(l)} · ${c.name}`;
@@ -1110,8 +1342,48 @@ function render(data,resetPlanDisclosure=false){
   renderInnerBoxGuide();
   if(event.isTrusted&&!window.applyingCommonInnerBox)window.selectedCommonInnerBox=null;
 }));
-$("cartonFields").hidden=$("autoMode").checked;
-$("autoMode").addEventListener("change",()=>$("cartonFields").hidden=$("autoMode").checked);
+function syncPackModeUI(){
+  const knife=document.querySelector('input[name="packMode"]:checked')?.value==="knifeCard";
+  $("innerRecommender").hidden=knife;
+  $("knifeCardFields").hidden=!knife;
+  $("cartonFields").hidden=knife||$("autoMode").checked;
+  ["foamPreference","mixedOrientationFlat","foamEnabled","sixFaceFoamRequired","foamThickness","foamCost","cartonCost","handlingCost"].forEach(id=>{
+    const el=$(id),wrap=el?.closest(".field,.switch-row,label");
+    if(wrap)wrap.hidden=knife;
+  });
+  const prefNote=$("preferenceNote");
+  if(prefNote)prefNote.hidden=knife;
+  $("calculate").textContent=knife?"计算刀卡方案":"计算装箱方案";
+  const titleEl=$("innerDimsTitle"),weightLabel=$("innerWeightLabel"),guide=$("innerBoxGuide");
+  if(titleEl)titleEl.textContent=knife?"产品尺寸":"销售内盒";
+  if(weightLabel)weightLabel.textContent=knife?"产品重量":"单盒重量";
+  if(guide)guide.setAttribute("aria-label",knife?"产品长宽高图解":"销售内盒长宽高图解");
+  renderInnerBoxGuide();
+}
+function populateKnifeVerifyOptions(){
+  const select=$("knifeVerifyKit");
+  if(!select)return;
+  select.innerHTML=KNIFE_CARD_KITS.map(kit=>`<option value="${esc(kit.id)}">${esc(kit.label)}${kit.enabled?"":"（图纸待确认）"}</option>`).join("");
+}
+function verifyKnifeAngle(){
+  const kit=KNIFE_CARD_KITS.find(item=>item.id===$("knifeVerifyKit").value);
+  if(!kit){$("knifeVerifyResult").textContent="未找到刀卡方案";return}
+  const dims=[value("innerL"),value("innerW"),value("innerH")],angle=value("knifeVerifyAngle"),clearance=value("knifeCellClearance"),axes=$("knifeVerifyAxis").value==="auto"?["width","length"]:[$("knifeVerifyAxis").value];
+  const checks=axes.map(axis=>checkKnifePlacement(dims,kit,axis,angle,clearance));
+  const ok=checks.find(item=>item.ok),target=ok||checks[0];
+  if(ok){
+    $("knifeVerifyResult").className="inner-match-status success";
+    $("knifeVerifyResult").textContent=`可行：${kit.label}，${knifeCardSummary({placement:ok})}，投影 ${ok.projected.length.toFixed(1)}×${ok.projected.width.toFixed(1)}×${ok.projected.height.toFixed(1)} mm。若自动推荐未出现，通常是该方案未启用、容量排序靠后，或自动搜索上限/步长未覆盖。`;
+  }else{
+    $("knifeVerifyResult").className="inner-match-status warning";
+    $("knifeVerifyResult").textContent=`不可行：${kit.label}，${target.reasons.join("；")}`;
+  }
+}
+populateKnifeVerifyOptions();
+syncPackModeUI();
+document.querySelectorAll('input[name="packMode"]').forEach(input=>input.addEventListener("change",syncPackModeUI));
+$("autoMode").addEventListener("change",syncPackModeUI);
+$("verifyKnifeAngle")?.addEventListener("click",verifyKnifeAngle);
 $("calculate").addEventListener("click",()=>{try{$("error").textContent="";render(collect(),true)}catch(e){$("error").textContent=e.message}});
 $("calculate").addEventListener("click",()=>{if(current&&!$("error").textContent)prepareExports(current)});
 $("planDisclosure").addEventListener("click",()=>{plansExpanded=!plansExpanded;if(current)renderPlanList(current,planKey(current.best))});

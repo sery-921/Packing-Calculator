@@ -68,7 +68,7 @@
           <option value="unpaired">只看无配套棉</option>
         </select>
       </label>
-      <p class="preference-note">点击可以切换其它偏好</p>
+      <p class="preference-note" id="preferenceNote">点击可以切换其它偏好</p>
       <div id="cartonFields">
         <div class="segmented">
           <label><input type="radio" name="dimensionType" value="inner" checked><span>内尺寸</span></label>
@@ -84,20 +84,24 @@
         </label>
       </div>
 
-      <div class="section-title"><span>02</span><h2>销售内盒</h2></div>
+      <div class="section-title"><span>02</span><h2 id="innerDimsTitle">销售内盒</h2></div>
       <div class="dimension-grid">
         <label>长 l<input id="innerL" type="number" min="0" step="0.1" value="200"><em>mm</em></label>
         <label>宽 w<input id="innerW" type="number" min="0" step="0.1" value="150"><em>mm</em></label>
         <label>高 h<input id="innerH" type="number" min="0" step="0.1" value="100"><em>mm</em></label>
       </div>
-      <div id="innerBoxGuide" class="box-dimension-guide" aria-label="销售内盒长宽高图解"></div>
-      <label class="field">单盒重量<input id="innerWeight" type="number" min="0" step="0.01" value="0.25"><em>kg</em></label>
+      <div id="innerBoxGuide" class="box-dimension-guide" aria-label="产品长宽高图解"></div>
+      <label class="field"><span id="innerWeightLabel">单盒重量</span><input id="innerWeight" type="number" min="0" step="0.01" value="0.25"><em>kg</em></label>
 
       <div id="knifeCardFields" hidden>
         <div class="section-title"><span>02K</span><h2>刀卡规则</h2></div>
         <label class="switch-row">
           <span><strong>允许自动倾斜</strong><small>自动推荐只输出可行方案，优先直放，再找最小可行倾斜角</small></span>
           <input id="knifeAutoTilt" type="checkbox" checked>
+        </label>
+        <label class="switch-row">
+          <span><strong>允许一格多件</strong><small>启用后，带多件排列的刀卡方案按每格多件计算（如 C10-02 一格 3 件）；关闭则所有方案按一格一件</small></span>
+          <input id="knifeAllowMultiPerCell" type="checkbox" checked>
         </label>
         <div class="dimension-grid compact">
           <label>最大倾斜角<input id="knifeMaxTilt" type="number" min="0" max="45" step="1" value="30"><em>°</em></label>
@@ -213,7 +217,7 @@
   <script type="module" src="preview3d.js?v=6"></script>
   <script src="packing-evaluator.js?v=3"></script>
   <script src="mixed-packing.js?v=2"></script>
-  <script src="app.js?v=16"></script>
+  <script src="app.js?v=20"></script>
   <script src="inner-box-recommender.js?v=5"></script>
 </body>
 </html>
