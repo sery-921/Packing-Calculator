@@ -1243,6 +1243,7 @@ function withPreviewFoams(data){return{...data,previewFoams:buildPreviewFoams(da
 function renderEngineeringPreview(previewData){
   const mount=$("preview");
   if(previewData.best.layout.mode==="knifeCard"){
+    if(window.disposePacking3D)window.disposePacking3D();
     mount.classList.remove("preview-3d");
     mount.innerHTML=svgKnifePreview(previewData);
     return;

@@ -593,6 +593,8 @@ export function renderPacking3D(data, mount) {
   return activePreview;
 }
 
+export function disposePacking3D(){if(activePreview){activePreview.stop();activePreview=null;}}
+
 export function update(params) {
   if (activePreview) activePreview.update(params);
 }
@@ -600,3 +602,4 @@ export function update(params) {
 window.renderPacking3D = renderPacking3D;
 window.dispatchEvent(new Event("packing3d-ready"));
 window.updatePacking3DPreview = update;
+window.disposePacking3D = disposePacking3D;
