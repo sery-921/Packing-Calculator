@@ -1308,6 +1308,8 @@ function render(data,resetPlanDisclosure=false){
   const {carton:c,layout:l}=previewData.best,p=l.padding,selectedKey=planKey(previewData.best);
   if(l.mode==="knifeCard"){
     $("results").hidden=false;
+  const _re2=$("resultsEmpty");if(_re2)_re2.hidden=true;
+    const _re=$("resultsEmpty");if(_re)_re.hidden=true;
     $("countGrid").textContent=`${l.counts.join("×")}=${l.quantity}`;
     $("quantity").textContent=l.quantity;
     $("orientationText").textContent=`${l.kit.label} · ${knifeCardSummary(l)} · ${c.name}`;
@@ -1327,6 +1329,7 @@ function render(data,resetPlanDisclosure=false){
     return;
   }
   $("results").hidden=false;
+  const _re=$("resultsEmpty");if(_re)_re.hidden=true;
   $("countGrid").textContent=layoutSummary(l);$("quantity").textContent=l.quantity;
   $("orientationText").textContent=`${modeText(l)} · ${orientationSummary(l)} · ${c.name}`;
   $("utilization").textContent=`${(l.utilization*100).toFixed(2)}%`;
