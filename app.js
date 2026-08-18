@@ -1248,14 +1248,14 @@ function renderEngineeringPreview(previewData){
     mount.innerHTML=svgKnifePreview(previewData);
     return;
   }
-  if(window.renderPacking3D){window.renderPacking3D(previewData,mount);return}
+  const _qty=previewData.best.layout.quantity||0;if(_qty>600){mount.classList.remove("preview-3d");mount.innerHTML=svgPreviewV4(previewData)+`<p class="hint" style="padding:8px 0 0">数量 ${_qty} 较大，已用俯视图预览（3D 预览在大数量下会卡顿）。</p>`;return}if(window.renderPacking3D){window.renderPacking3D(previewData,mount);return}
   mount.classList.remove("preview-3d");
   mount.innerHTML=svgPreviewV4(previewData);
   clearTimeout(preview3dRetryTimer);
   let attempts=0;
   const retry=()=>{
     if(!current)return;
-    if(window.renderPacking3D){window.renderPacking3D(current,mount);return}
+    const _rq=current.best.layout.quantity||0;if(_rq<=600&&window.renderPacking3D){window.renderPacking3D(current,mount);return}
     if(++attempts<20)preview3dRetryTimer=setTimeout(retry,250);
   };
   preview3dRetryTimer=setTimeout(retry,250);
@@ -1381,7 +1381,8 @@ function verifyKnifeAngle(){
 }
 populateKnifeVerifyOptions();
 syncPackModeUI();
-document.querySelectorAll('input[name="packMode"]').forEach(input=>input.addEventListener("change",syncPackModeUI));
+function resetDimsForMode(knife){const sets=knife?{innerL:30,innerW:30,innerH:50,innerWeight:0.05}:{innerL:200,innerW:150,innerH:100,innerWeight:0.25};["innerL","innerW","innerH","innerWeight"].forEach(id=>{const el=$(id);if(el)el.value=sets[id];});renderInnerBoxGuide();}
+document.querySelectorAll('input[name="packMode"]').forEach(input=>input.addEventListener("change",()=>{const knife=document.querySelector('input[name="packMode"]:checked')?.value==="knifeCard";syncPackModeUI();resetDimsForMode(knife);}));
 $("autoMode").addEventListener("change",syncPackModeUI);
 $("verifyKnifeAngle")?.addEventListener("click",verifyKnifeAngle);
 $("calculate").addEventListener("click",()=>{try{$("error").textContent="";render(collect(),true)}catch(e){$("error").textContent=e.message}});
