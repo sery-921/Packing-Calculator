@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#17324d">
   <title>包装装箱优化器</title>
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="style.css?v=7">
+  <link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
   <header>
@@ -106,10 +106,10 @@
         <div class="dimension-grid compact">
           <label>最大倾斜角<input id="knifeMaxTilt" type="number" min="0" max="45" step="1" value="30"><em>°</em></label>
           <label>入格余量<input id="knifeCellClearance" type="number" min="0" step="0.1" value="1"><em>mm</em></label>
-          <label>搜索步长<input id="knifeTiltStep" type="number" min="0.1" max="5" step="0.1" value="0.5"><em>°</em></label>
+          <label><span class="tip-host">搜索步长<span class="tip-box">裸产品放进刀卡格子时，可能需要把产品倾斜一点才放得下。这个值是程序尝试倾斜时每次加的角度，比如 0.5° 就是从水平开始、每次多转 0.5° 去试，直到找到能放进去的最小角度。值小→试得更细→结果更准但稍慢；值大→试得快但可能漏掉可行角度。默认 0.5° 一般不用改。</span></span><input id="knifeTiltStep" type="number" min="0.1" max="5" step="0.1" value="0.5"><em>°</em></label>
         </div>
         <details class="knife-verify">
-          <summary>验证指定倾斜角（可选）</summary>
+          <summary><span>验证指定倾斜角（可选）</span><i class="disclosure-arrow" aria-hidden="true"></i></summary>
           <div class="dimension-grid compact">
             <label>方案
               <select id="knifeVerifyKit"></select>
