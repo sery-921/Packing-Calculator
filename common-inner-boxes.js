@@ -61,42 +61,6 @@ window.COMMON_INNER_BOXES = [
     logo: "带 Logo；带质量强度章，带防损标志"
   },
   {
-    sku: "327112045",
-    code: "*",
-    name: "327112045 通用飞机盒",
-    outer: [185, 168, 133],
-    material: "K3KE坑",
-    boardThickness: 2,
-    logo: "不带 Logo"
-  },
-  {
-    sku: "327112046",
-    code: "*",
-    name: "327112046 通用飞机盒",
-    outer: [80, 60, 30],
-    material: "K3KE坑",
-    boardThickness: 2,
-    logo: "不带 Logo"
-  },
-  {
-    sku: "327112047",
-    code: "*",
-    name: "327112047 通用飞机盒",
-    outer: [110, 85, 42],
-    material: "K3KE坑",
-    boardThickness: 2,
-    logo: "不带 Logo"
-  },
-  {
-    sku: "327112048",
-    code: "*",
-    name: "327112048 通用飞机盒",
-    outer: [159, 115, 45],
-    material: "K3KE坑",
-    boardThickness: 2,
-    logo: "不带 Logo"
-  },
-  {
     sku: "327111763",
     code: "A01",
     name: "A01 通用飞机盒",
@@ -147,8 +111,18 @@ window.COMMON_INNER_BOXES = [
     code: "",
     name: "327000399 通用飞机盒",
     outer: [335, 253, 79],
-    material: "黄牛皮纸200g(优牛)-B瓦120g-黄牛皮纸160g(国牛)，厚度3mm",
-    boardThickness: 3,
-    logo: "不带 Logo"
+   material: "黄牛皮纸200g(优牛)-B瓦120g-黄牛皮纸160g(国牛)，厚度3mm",
+   boardThickness: 3,
+   logo: "不带 Logo"
+  },
+  {
+    sku: "327111882",
+    code: "",
+    name: "327111882 通用飞机盒",
+    outer: [136, 87, 42],
+    material: "250G新西兰牛卡+KF+250G新西兰牛卡+正反印刷，厚度1.5mm",
+    boardThickness: 1.5,
+    logo: "不带 Logo",
+    note: "内面有印刷，选择时需和需求方确认"
   }
 ];
