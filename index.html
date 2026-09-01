@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#17324d">
   <title>包装装箱优化器</title>
   <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="style.css?v=7">
+<link rel="stylesheet" href="style.css?v=9">
 </head>
 <body>
   <header>
@@ -21,9 +21,11 @@
       <p class="feature-lead">00 模块用于推荐通用内盒。如不需要推荐，或已知销售内盒尺寸，可跳过此模块，直接填写 02 模块的内盒数据。</p>
      <p class="feature-lead">如已知内装物产品尺寸，并需要推荐通用内盒，先输入产品尺寸，点击“推荐通用内盒”；匹配到可用内盒后，点击“使用此内盒”，系统会将对应通用内盒尺寸一键带入 02 模块。</p>
      <div class="bubble-wrap-block">
-       <div class="switch-row bw-toggle-row"><label for="bubbleWrapToggle"><span><strong>气泡片裹包</strong><small>开启后，产品尺寸框自动显示裹后尺寸并参与下方推荐</small></span></label><input id="bubbleWrapToggle" type="checkbox"></div>
-       <div id="bubbleWrapBody" class="bubble-wrap-body" hidden>
-         <div class="bw-controls">
+       <div class="switch-row bw-toggle-row"><label for="bubbleWrapToggle"><span><strong>气泡片裹包</strong><small>默认收起。展开后配置裹向/圈数/对折，确认裹后尺寸用于下方推荐</small></span></label><input id="bubbleWrapToggle" type="checkbox"></div>
+      <div id="bubbleWrapBody" class="bubble-wrap-body" hidden>
+        <div class="bw-card-title">气泡片裹包</div>
+        <div class="bw-controls">
+          <div id="bwRawDims" class="bw-rawdims"></div>
          <div class="segmented bw-axis-seg">
            <label><input type="radio" name="bwAxis" value="length" checked><span>裹长向</span></label>
            <label><input type="radio" name="bwAxis" value="width"><span>裹宽向</span></label>
@@ -194,8 +196,8 @@
   <script type="module" src="preview3d.js?v=6"></script>
  <script src="packing-evaluator.js?v=3"></script>
  <script src="mixed-packing.js?v=2"></script>
-<script src="app.js?v=16"></script>
- <script src="bubble-wrap.js?v=1"></script>
+ <script src="app.js?v=15"></script>
+<script src="bubble-wrap.js?v=3"></script>
  <script src="inner-box-recommender.js?v=5"></script>
 </body>
 </html>

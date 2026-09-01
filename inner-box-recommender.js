@@ -57,9 +57,13 @@
     };
   }
 
-  function recommend() {
-    const productDims = [number("productL"), number("productW"), number("productH")];
-    const buffer = number("productBuffer");
+function recommend() {
+// 气泡片已确认时，产品最终尺寸 = 裹后尺寸；否则用裸品尺寸
+const useWrapped = window.BubbleWrap && window.BubbleWrap.isConfirmed && window.BubbleWrap.isConfirmed();
+const productDims = useWrapped && window.BubbleWrap.wrappedDims()
+  ? window.BubbleWrap.wrappedDims()
+  : [number("productL"), number("productW"), number("productH")];
+const buffer = number("productBuffer");
     if (productDims.some(value => value <= 0)) throw new Error("请填写产品长、宽、高（均需大于 0）。");
     const allowRotate = $("productRotate")?.checked !== false;
     const results = boxes.flatMap(record => {
@@ -154,7 +158,10 @@
   ["productL", "productW", "productH", "productBuffer"].forEach(id => $(id)?.addEventListener("input", () => {
     if ($("innerMatchResults")?.children.length) run(false);
   }));
-  $("productRotate")?.addEventListener("change", () => {
-    if ($("innerMatchResults")?.children.length) run(false);
-  });
+$("productRotate")?.addEventListener("change", () => {
+  if ($("innerMatchResults")?.children.length) run(false);
+});
+// 气泡片确认/取消/收起时，重新推荐（基准随之切换）
+window.addEventListener("bubble-wrap-confirmed", () => run(false));
+window.addEventListener("bubble-wrap-revert", () => run(false));
 })();
