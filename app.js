@@ -1388,8 +1388,19 @@ function resetDimsForMode(knife){const sets=knife?{innerL:30,innerW:30,innerH:50
 document.querySelectorAll('input[name="packMode"]').forEach(input=>input.addEventListener("change",()=>{const knife=document.querySelector('input[name="packMode"]:checked')?.value==="knifeCard";syncPackModeUI();resetDimsForMode(knife);}));
 $("autoMode").addEventListener("change",syncPackModeUI);
 $("verifyKnifeAngle")?.addEventListener("click",verifyKnifeAngle);
-$("calculate").addEventListener("click",()=>{try{$("error").textContent="";render(collect(),true)}catch(e){$("error").textContent=e.message}});
-$("calculate").addEventListener("click",()=>{if(current&&!$("error").textContent)prepareExports(current)});
+const calcBtn=$("calculate");
+calcBtn.addEventListener("click",()=>{
+  if(calcBtn.disabled)return;
+  $("error").textContent="";
+  calcBtn.disabled=true;
+  const origText=calcBtn.textContent;
+  calcBtn.textContent="计算中…";
+  requestAnimationFrame(()=>setTimeout(()=>{
+    try{const data=collect();render(data,true);if(current&&!$("error").textContent)prepareExports(current)}
+    catch(e){$("error").textContent=e.message}
+    finally{calcBtn.disabled=false;calcBtn.textContent=origText}
+  },0));
+});
 $("planDisclosure").addEventListener("click",()=>{plansExpanded=!plansExpanded;if(current)renderPlanList(current,planKey(current.best))});
 window.addEventListener("packing3d-ready",()=>{if(current)renderEngineeringPreview(current)});
 $("pdfPreviewToggle").addEventListener("click",()=>{
