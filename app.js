@@ -1347,16 +1347,17 @@ function render(data,resetPlanDisclosure=false){
 }));
 function syncPackModeUI(){
   const knife=document.querySelector('input[name="packMode"]:checked')?.value==="knifeCard";
-  $("innerRecommender").hidden=knife;
-  $("knifeCardFields").hidden=!knife;
-  $("cartonFields").hidden=knife||$("autoMode").checked;
+  const setH=(id,val)=>{const el=$(id);if(el)el.hidden=val};
+  setH("innerRecommender",knife);
+  setH("knifeCardFields",!knife);
+  setH("cartonFields",knife||$("autoMode")?.checked);
   ["foamPreference","mixedOrientationFlat","foamEnabled","sixFaceFoamRequired","foamThickness","foamCost","cartonCost","handlingCost"].forEach(id=>{
     const el=$(id),wrap=el?.closest(".field,.switch-row,label");
     if(wrap)wrap.hidden=knife;
   });
   const prefNote=$("preferenceNote");
   if(prefNote)prefNote.hidden=knife;
-  $("calculate").textContent=knife?"计算刀卡方案":"计算装箱方案";
+  const calcBtn=$("calculate");if(calcBtn)calcBtn.textContent=knife?"计算刀卡方案":"计算装箱方案";
   const titleEl=$("innerDimsTitle"),weightLabel=$("innerWeightLabel"),guide=$("innerBoxGuide");
   if(titleEl)titleEl.textContent=knife?"产品尺寸":"销售内盒";
   if(weightLabel)weightLabel.textContent=knife?"产品重量":"单盒重量";
