@@ -1410,6 +1410,13 @@ $("pdfPreviewToggle").addEventListener("click",()=>{
   $("pdfPreviewToggle").querySelector(".disclosure-label").textContent=expanded?"展开":"收起";
   $("pdfPreviewBody").hidden=expanded;
 });
+$("innerRecommenderToggle")?.addEventListener("click",()=>{
+  const t=$("innerRecommenderToggle");
+  const expanded=t.getAttribute("aria-expanded")==="true";
+  t.setAttribute("aria-expanded",String(!expanded));
+  t.querySelector(".disclosure-label").textContent=expanded?"展开":"收起";
+  $("innerRecommenderBody").hidden=expanded;
+});
 document.querySelectorAll("[data-download]").forEach(link=>link.addEventListener("click",event=>{
   if(link.getAttribute("aria-disabled")==="true"){event.preventDefault();return}
   $("exportStatus").textContent=`已触发 ${link.textContent.trim()} 下载；如果浏览器打开预览页，请使用“保存”或“下载”。`;

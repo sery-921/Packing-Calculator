@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#17324d">
   <title>包装装箱优化器</title>
   <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="style.css?v=9">
+<link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
   <header>
@@ -17,9 +17,12 @@
 
   <main>
     <section class="panel inner-recommender-panel" id="innerRecommender">
-      <div class="section-title"><span>00</span><h2>通用内盒推荐（可选）</h2></div>
+      <button id="innerRecommenderToggle" class="section-title section-toggle" type="button" aria-expanded="false" aria-controls="innerRecommenderBody">
+        <span>00</span><h2>通用内盒推荐（可选）</h2><span class="disclosure-label">展开</span><i class="disclosure-arrow" aria-hidden="true"></i>
+      </button>
       <p class="feature-lead">00 模块用于推荐通用内盒。如不需要推荐，或已知销售内盒尺寸，可跳过此模块，直接填写 02 模块的内盒数据。</p>
      <p class="feature-lead">如已知内装物产品尺寸，并需要推荐通用内盒，先输入产品尺寸，点击“推荐通用内盒”；匹配到可用内盒后，点击“使用此内盒”，系统会将对应通用内盒尺寸一键带入 02 模块。</p>
+     <div id="innerRecommenderBody" hidden>
      <div class="bubble-wrap-block">
        <div class="switch-row bw-toggle-row"><label for="bubbleWrapToggle"><span><strong>气泡片裹包</strong><small>默认收起。展开后配置裹向/圈数/对折，确认裹后尺寸用于下方推荐</small></span></label><input id="bubbleWrapToggle" type="checkbox"></div>
       <div id="bubbleWrapBody" class="bubble-wrap-body" hidden>
@@ -66,8 +69,9 @@
           </div>
         </div>
       </div>
-     <p id="innerMatchStatus" class="inner-match-status">输入产品尺寸后点击“推荐通用内盒”。</p>
-     <div id="innerMatchResults" class="inner-match-results"></div>
+      <p id="innerMatchStatus" class="inner-match-status">输入产品尺寸后点击“推荐通用内盒”。</p>
+      <div id="innerMatchResults" class="inner-match-results"></div>
+      </div>
    </section>
 
     <section class="panel form-panel">
