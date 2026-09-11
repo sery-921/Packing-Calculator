@@ -379,7 +379,6 @@ function formulaText(data) {
   const layout = data.best.layout;
   const d = layout.orientationDistribution || { rotation0: 0, rotation90: 0 };
   const isTrueMixedFlat = layout.mode === "mixedOrientationFlat" && Number(d.rotation0) > 0 && Number(d.rotation90) > 0;
-  const orientationText = layout.orientationText || layout.posture || "平放";
   const gridCounts = () => {
     const boxes = Array.isArray(layout.boxes) ? layout.boxes : [];
     if (!boxes.length) return layout.counts.map(Number);
@@ -390,7 +389,10 @@ function formulaText(data) {
     return `装配方案: 平放混排 ${layout.quantity} pcs · 0° ${d.rotation0} / 90° ${d.rotation90}`;
   }
   const [nx, ny, nz] = gridCounts();
-  return `装配方案: 统一朝向${orientationText} ${layout.quantity} pcs 长${nx}*宽${ny}*高${nz}`;
+  const base = (layout.baseDims || []).map(Number).join("×");
+  const placed = (layout.orientation || []).map(Number).join("×");
+  const transform = base && placed && base !== placed ? `${base} → ${placed}` : placed;
+  return `装配方案: 统一朝向 ${transform}；${layout.quantity} pcs 长${nx}*宽${ny}*高${nz}`;
 }
 
 function layoutProductDims(layout) {
@@ -440,7 +442,7 @@ class PackingExplodedPreview {
     this.mount.appendChild(this.formulaEl);
     this.hintEl = document.createElement("div");
     this.hintEl.className = "preview-3d-hint";
-    this.hintEl.textContent = "含有配套棉时，点击泡棉任意处可查看泡棉信息";
+    this.hintEl.innerHTML = "<div>含有配套棉时，点击泡棉任意处可查看泡棉信息</div><div>滚动鼠标滚轮可以缩放视图</div><div>按住鼠标左键可拖拽视图</div>";
     this.mount.appendChild(this.hintEl);
     this.detailEl = document.createElement("div");
     this.detailEl.className = "preview-3d-foam-detail";
