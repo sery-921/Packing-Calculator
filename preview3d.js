@@ -391,8 +391,19 @@ function formulaText(data) {
   const [nx, ny, nz] = gridCounts();
   const base = (layout.baseDims || []).map(Number).join("×");
   const placed = (layout.orientation || []).map(Number).join("×");
-  const transform = base && placed && base !== placed ? `${base} → ${placed}` : placed;
-  return `装配方案: 统一朝向 ${transform}；${layout.quantity} pcs 长${nx}*宽${ny}*高${nz}`;
+  const posture = layout.posture || "平放";
+  let lead = "统一朝向", detail = placed;
+  if (base && placed && base === placed) {
+    lead = "统一朝向平放";
+    detail = placed;
+  } else if (base && placed && posture === "平放") {
+    lead = "统一朝向平放";
+    detail = `${base} （${layout.swapText || "内盒长宽互换"}）`;
+  } else if (base && placed) {
+    lead = "统一朝向";
+    detail = `${base} → ${placed}`;
+  }
+  return `装配方案: ${lead} ${detail}；${layout.quantity} pcs 长${nx}*宽${ny}*高${nz}`;
 }
 
 function layoutProductDims(layout) {
