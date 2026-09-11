@@ -96,6 +96,32 @@ function finishLayout(c,box,opt,item){
 }
 function hasFoamPair(p){return !!p&&p.low>0&&p.high>0}
 function hasSixFaceFoam(l){return PADDING_AXES.every(axis=>hasFoamPair(l.padding?.[axis]))}
+function orientationPosture(baseDims,orientation){
+  if(!Array.isArray(baseDims)||!Array.isArray(orientation)||baseDims.length<3||orientation.length<3)return"平放";
+  const[,baseW,baseH]=baseDims,[,,placedH]=orientation;
+  if(placedH===baseH)return"平放";
+  if(placedH===baseW)return"侧放";
+  return"立放";
+}
+function orientationSwap(baseDims,orientation){
+  if(!Array.isArray(baseDims)||!Array.isArray(orientation)||baseDims.length<3||orientation.length<3)return"";
+  const[baseL,baseW,baseH]=baseDims,[placedL,placedW,placedH]=orientation;
+  if(placedL===baseL&&placedW===baseW&&placedH===baseH)return"";
+  if(placedL===baseW&&placedW===baseL&&placedH===baseH)return"内盒长宽互换";
+  if(placedL===baseL&&placedW===baseH&&placedH===baseW)return"内盒宽高互换";
+  if(placedL===baseH&&placedW===baseW&&placedH===baseL)return"内盒长高互换";
+  if(placedL===baseW&&placedW===baseH&&placedH===baseL)return"内盒长宽高轮换";
+  if(placedL===baseH&&placedW===baseL&&placedH===baseW)return"内盒宽长高轮换";
+  return"内盒三轴置换";
+}
+function orientationTextFor(baseDims,orientation){
+  const posture=orientationPosture(baseDims,orientation),swap=orientationSwap(baseDims,orientation);
+  return swap?`${posture}（${swap}）`:posture;
+}
+function orientationEnglish(l){
+  const posture=l.posture||orientationPosture(l.baseDims,l.orientation);
+  return posture==="侧放"?"SIDE":posture==="立放"?"UPRIGHT":"FLAT";
+}
 function layoutScore(item,opt){return(item.evaluation?.sortScore??(item.quantity*100000+item.utilization*1000))+(opt?.sixFaceFoamRequired&&hasSixFaceFoam(item)?FOAM_CLOSURE_BONUS:0)}
 function isBetterLayout(candidate,best,opt){
   if(!best)return true;
@@ -110,7 +136,8 @@ function isBetterLayout(candidate,best,opt){
 function buildUniformLayout(c,box,opt,o,counts,rotation,meta={}){
   const quantity=product(counts);if(quantity<=0)return null;
   const residual=c.inner.map((v,i)=>Math.max(0,+(v-counts[i]*o[i]).toFixed(6)));
-  const item=finishLayout(c,box,opt,{mode:"uniformOrientation",orientation:o,counts,quantity,residual,areaUtilization:(counts[0]*counts[1]*o[0]*o[1])/(c.inner[0]*c.inner[1]),orientationDistribution:{rotation0:rotation===0?quantity:0,rotation90:rotation===90?quantity:0},boxes:null,rotation,...meta});
+  const posture=orientationPosture(box.dims,o),swapText=orientationSwap(box.dims,o),orientationText=orientationTextFor(box.dims,o);
+  const item=finishLayout(c,box,opt,{mode:"uniformOrientation",orientation:o,counts,quantity,residual,areaUtilization:(counts[0]*counts[1]*o[0]*o[1])/(c.inner[0]*c.inner[1]),orientationDistribution:{rotation0:rotation===0?quantity:0,rotation90:rotation===90?quantity:0},boxes:null,rotation,baseDims:box.dims,posture,swapText,orientationText,...meta});
   item.boxes=uniformBoxes(item);
   return applyEvaluation(c,box,opt,item);
 }
@@ -153,7 +180,7 @@ function layoutForMixed(c,box,opt,uniform){
   const mixed=window.PackingMixed.packMixedFlat({cartonInner:c.inner,boxDims:box.dims,clearance:opt.clearance,allowFullFit:opt.allowFullFit});
   if(!mixed.feasible)return null;
   const residual=[mixed.remaining.lengthResidual,mixed.remaining.widthResidual,mixed.remaining.heightResidual].map(v=>Math.max(0,+v.toFixed(6)));
-  const layout=finishLayout(c,box,opt,{mode:"mixedOrientationFlat",method:mixed.method,orientation:[box.dims[0],box.dims[1],box.dims[2]],counts:[mixed.countPerLayer,1,mixed.layers],quantity:mixed.count,residual,areaUtilization:mixed.areaUtilization,orientationDistribution:mixed.orientationDistribution,boxes:mixed.boxes,freeRectangles:mixed.freeRectangles,warnings:mixed.warnings||[],uniformQuantity:uniform?.quantity||0,improvement:mixed.count-(uniform?.quantity||0)});
+  const layout=finishLayout(c,box,opt,{mode:"mixedOrientationFlat",method:mixed.method,orientation:[box.dims[0],box.dims[1],box.dims[2]],counts:[mixed.countPerLayer,1,mixed.layers],quantity:mixed.count,residual,areaUtilization:mixed.areaUtilization,orientationDistribution:mixed.orientationDistribution,boxes:mixed.boxes,freeRectangles:mixed.freeRectangles,warnings:mixed.warnings||[],uniformQuantity:uniform?.quantity||0,improvement:mixed.count-(uniform?.quantity||0),baseDims:box.dims,posture:"平放",orientationText:"平放"});
   return applyEvaluation(c,box,opt,layout);
 }
 function layoutFor(c,box,opt){
@@ -636,15 +663,15 @@ function svgPreviewV4(data){
   const carton=`<g class="cartonV4"><polygon class="cartonLeftV4" points="360,624 600,714 600,814 360,724"/><polygon class="cartonRightV4" points="840,624 600,714 600,814 840,724"/><polygon class="cartonInsideV4" points="360,624 600,536 840,624 600,714"/><polygon class="flapV4" points="360,624 600,536 548,486 292,578"/><polygon class="flapV4" points="840,624 600,536 652,486 908,578"/><polygon class="flapV4" points="360,624 600,714 600,658 316,552"/><polygon class="flapV4" points="840,624 600,714 600,658 884,552"/><polyline class="cartonRimV4" points="360,624 600,536 840,624 600,714 360,624"/></g>`;
   const totalFoam=faces.reduce((s,f)=>s+(Number(f.count)||0),0),material=String(c.material||c.flute||"");
   const title=esc([c.code&&c.code!=="*"?c.code:c.sku||"",Array.isArray(c.outer)?`${c.outer.join(xMark)} mm`:"",material].filter(Boolean).join(" · "));
-  const subtitle=esc(`\u5185\u76d2 ${l.orientation.join(" × ")} mm${l.rotation===90?"（90°长宽互换）":""} · \u73cd\u73e0\u68c9 ${totalFoam} \u7247`);
+  const subtitle=esc(`内盒 ${l.orientation.join(" × ")} mm · ${l.orientationText||orientationTextFor(l.baseDims,l.orientation)} · 珍珠棉 ${totalFoam} 片`);
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 820" preserveAspectRatio="xMidYMid meet" role="img" aria-label="engineering preview"><defs><linearGradient id="bgV4" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fbfdff"/><stop offset="1" stop-color="#edf4fa"/></linearGradient><linearGradient id="pinkV4" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff8fc7"/><stop offset="1" stop-color="#df519e"/></linearGradient><linearGradient id="blueV4" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#aab2ff"/><stop offset="1" stop-color="#5c6fe2"/></linearGradient><linearGradient id="topV4" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff4b4"/><stop offset="1" stop-color="#ffd55e"/></linearGradient><pattern id="foamPatternV4" width="18" height="18" patternUnits="userSpaceOnUse"><rect width="18" height="18" fill="#c9eee6"/><path d="M0 9H18M9 0V18" stroke="#f9fffd" stroke-width="1"/><circle cx="4.5" cy="4.5" r="1.15" fill="#fff" opacity=".72"/></pattern><filter id="shadowV4" x="-25%" y="-25%" width="150%" height="150%"><feDropShadow dx="0" dy="11" stdDeviation="11" flood-color="#14324d" flood-opacity=".16"/></filter><style>.foamV4,.innerBlockV4,.cartonV4{filter:url(#shadowV4)}.foamPanelV4{fill:url(#foamPatternV4);stroke:#277c6e;stroke-width:2}.innerPinkV4{fill:url(#pinkV4);stroke:#153c60;stroke-width:2}.innerBlueV4{fill:url(#blueV4);stroke:#153c60;stroke-width:2}.innerTopV4{fill:url(#topV4);stroke:#153c60;stroke-width:2}.gridV4{stroke:#153c60;stroke-width:1.55;fill:none}.flapV4{fill:#deb777;stroke:#765335;stroke-width:1.9}.cartonInsideV4{fill:#bf8e55;fill-opacity:.45;stroke:#765335;stroke-width:1.8}.cartonLeftV4{fill:#d1a46e;stroke:#765335;stroke-width:1.9}.cartonRightV4{fill:#a87849;stroke:#765335;stroke-width:1.9}.cartonRimV4{fill:none;stroke:#65452c;stroke-width:2.2}.badgeV4 rect{fill:#fcfffd;stroke:#3b9876;stroke-width:1.5}.badgeV4 text{font:700 16px "Microsoft YaHei",Arial,sans-serif;fill:#087146}.footerV4 rect{fill:#fff;stroke:#d5e0e8}.footerV4 text{font:700 25px "Microsoft YaHei",Arial,sans-serif;fill:#102b45}</style></defs><rect width="1120" height="820" rx="28" fill="url(#bgV4)"/>${carton}${faces.map(panel).join("")}${block}<g class="footerV4"><rect x="268" y="752" width="584" height="50" rx="12"/><text x="560" y="785" text-anchor="middle">${txt.assembly}: ${txt.length} ${nx} ${xMark} ${txt.width} ${ny} ${xMark} ${txt.height} ${nz} = ${l.quantity} pcs</text></g></svg>`;
 }
-function report(data){if(data.best.layout.mode==="knifeCard")return knifeReport(data);const {carton:c,layout:l}=data.best,p=l.padding,d=l.orientationDistribution||{rotation0:0,rotation90:0},foamLine=c.has_existing_foam?`- 原表配套珍珠棉：${c.foam_note||"有配套珍珠棉备注"}\n`:"",mode=l.mode==="mixedOrientationFlat"?"平放长宽混排":"统一朝向网格";return`## 输入参数
+function report(data){if(data.best.layout.mode==="knifeCard")return knifeReport(data);const {carton:c,layout:l}=data.best,p=l.padding,d=l.orientationDistribution||{rotation0:0,rotation90:0},foamLine=c.has_existing_foam?`- 原表配套珍珠棉：${c.foam_note||"有配套珍珠棉备注"}\n`:"",mode=isTrueMixedFlat(l)?"平放混排":`统一朝向${l.orientationText||orientationTextFor(l.baseDims,l.orientation)}`;return`## 输入参数
 - 外箱内尺寸：长${c.inner[0]}×宽${c.inner[1]}×高${c.inner[2]} mm
 - 推荐箱型：${c.name}
 - 箱型信息：SKU ${c.sku||"-"}；编码 ${c.code||"-"}；材质 ${c.material||c.flute}
-${foamLine}- 内盒尺寸：长${l.orientation[0]}×宽${l.orientation[1]}×高${l.orientation[2]} mm${l.rotation===90?"（90°长宽互换）":""}
-- 装箱模式：${mode}${l.rotation===90?"（90°长宽互换）":""}
+${foamLine}- 内盒尺寸：长${l.orientation[0]}×宽${l.orientation[1]}×高${l.orientation[2]} mm · ${l.orientationText||orientationTextFor(l.baseDims,l.orientation)}
+- 装箱模式：${mode}
 - 珍珠棉厚度：${data.opt.foamT}mm/片
 
 ## 最优装配方案
@@ -652,7 +679,7 @@ ${foamLine}- 内盒尺寸：长${l.orientation[0]}×宽${l.orientation[1]}×高$
 - 层数：${l.counts[2]}层；每层 ${l.counts[0]} 个
 - 体积利用率：${(l.utilization*100).toFixed(2)}%
 - 底面积利用率：${((l.areaUtilization||0)*100).toFixed(2)}%
-- 朝向分布：0° ${d.rotation0}个；90° ${d.rotation90}个
+- 朝向分布：${isTrueMixedFlat(l)?`0° ${d.rotation0}个；90° ${d.rotation90}个`:"统一朝向"}
 - 相对统一朝向提升：${l.improvement>0?`+${l.improvement}`:l.improvement||0}个
 
 ## 余量分析
@@ -796,7 +823,7 @@ function dxf(data){
   const offX=p.length.lowStack+p.length.unfilled/2,offY=p.width.lowStack+p.width.unfilled/2,offZ=p.height.lowStack+p.height.unfilled/2;
   text(ox,30,8,"CARTON PACKING DRAWING");
   text(ox,45,5,`CARTON SKU ${c.sku||"-"} CODE ${c.code||"-"} OUT ${ol}x${ow}x${oh}mm IN ${cl}x${cw}x${ch}mm`);
-  text(ox,55,5,`INNER ${l.orientation.join("x")}mm${l.rotation===90?" ROT90":""} GRID ${nl}x${nw}x${nh}=${l.quantity}pcs/carton EPE ${data.opt.foamT}mm`);
+  text(ox,55,5,`INNER ${l.orientation.join("x")}mm POSE ${orientationEnglish(l)} GRID ${nl}x${nw}x${nh}=${l.quantity}pcs/carton EPE ${data.opt.foamT}mm`);
   text(ox,65,5,`BOM CARTON 1pcs LR ${p.length.sheets}pcs ${code("length")} FB ${p.width.sheets}pcs ${code("width")} TB ${p.height.sheets}pcs ${code("height")}`);
   text(ox,oy-12,5,"TOP VIEW");
   rect(ox,oy,cl,cw,"CARTON");
@@ -845,7 +872,7 @@ function textLines(data){
     `外箱内尺寸：${c.inner.join(" × ")} mm（${c.name}）`,
     `箱型信息：SKU ${c.sku||"-"} / 编码 ${c.code||"-"} / 材质 ${c.material||c.flute}`,
     c.has_existing_foam?`原表配套珍珠棉：${c.foam_note||"有配套珍珠棉备注"}`:"原表配套珍珠棉：无",
-    `内盒尺寸：${l.orientation.join(" × ")} mm${l.rotation===90?"（90°长宽互换）":""}`,
+    `内盒尺寸：${l.orientation.join(" × ")} mm · ${l.orientationText||orientationTextFor(l.baseDims,l.orientation)}`,
     `内盒朝向：${l.orientation.join(" × ")} mm`,
     `排列方式：${l.counts.join(" × ")} = ${l.quantity} 个/箱`,
     `空间利用率：${(l.utilization*100).toFixed(2)}%`
@@ -951,7 +978,7 @@ pdfLine(`每格产品数：${l.units||1} 件${(l.units||1)>1?"（"+l.arrangement
     pdfLine(`外箱：${cartonPrimaryText(c)}（内尺寸 ${c.inner.join(" × ")} mm）`,true),
     pdfLine(`箱型信息：SKU ${c.sku||"-"} / 编码 ${c.code||"-"} / 材质 ${c.material||c.flute}`),
     pdfLine(c.has_existing_foam?`原表配套珍珠棉：${c.foam_note||"有配套珍珠棉备注"}`:"原表配套珍珠棉：无"),
-    pdfLine(`内盒尺寸：${l.orientation.join(" × ")} mm${l.rotation===90?"（90°长宽互换）":""}`)
+    pdfLine(`内盒尺寸：${l.orientation.join(" × ")} mm · ${l.orientationText||orientationTextFor(l.baseDims,l.orientation)}`)
   ];
   if(hasMixed){
     lines.push(
@@ -960,9 +987,8 @@ pdfLine(`每格产品数：${l.units||1} 件${(l.units||1)>1?"（"+l.arrangement
       pdfLine(`装箱数量：每层 ${grid.perLayer} 个 × ${grid.layers} 层 = ${l.quantity} 个/箱`,true)
     );
   }else{
-    const rotation=d.rotation90>0?"90°":"0°";
     lines.push(
-      pdfLine(`装箱模式：统一朝向平放（${rotation}${l.rotation===90?"，长宽互换":""}）`,true),
+      pdfLine(`装箱模式：统一朝向${l.orientationText||orientationTextFor(l.baseDims,l.orientation)}`,true),
       pdfLine(`排列方式：长方向 ${grid.lengthCount} × 宽方向 ${grid.widthCount} × 高方向 ${grid.layers} = ${l.quantity} 个/箱`,true)
     );
   }
@@ -1153,7 +1179,7 @@ function excelTable(data){
     ["放置方式",knifeCardSummary(l)]
   ]:[
     ["外箱",`${c.sku||"-"} ${Array.isArray(c.outer)?c.outer.join("×"):"-"} ${c.material||c.flute||""}`],
-    ["内盒尺寸",`${l.orientation.join("×")} mm${l.rotation===90?"（90°长宽互换）":""}`],
+    ["内盒尺寸",`${l.orientation.join("×")} mm · ${l.orientationText||orientationTextFor(l.baseDims,l.orientation)}`],
     ["装箱数量",`${l.quantity} 个/箱`],
     ["排列方式",`${modeText(l)}；${planLayoutSummary(l)}个`],
     ["朝向分布",orientationSummary(l)]
@@ -1261,8 +1287,12 @@ function renderEngineeringPreview(previewData){
   preview3dRetryTimer=setTimeout(retry,250);
 }
 function isTrueMixedFlat(l){const d=l.orientationDistribution||{rotation0:0,rotation90:0};return l.mode==="mixedOrientationFlat"&&Number(d.rotation0)>0&&Number(d.rotation90)>0}
-function modeText(l){return isTrueMixedFlat(l)?"平放混排":"统一朝向平放"}
-function orientationSummary(l){const d=l.orientationDistribution||{rotation0:0,rotation90:0};return `0° ${d.rotation0} / 90° ${d.rotation90}`}
+function modeText(l){return isTrueMixedFlat(l)?"平放混排":`统一朝向${l.posture||orientationPosture(l.baseDims,l.orientation)}`}
+function orientationSummary(l){
+  const d=l.orientationDistribution||{rotation0:0,rotation90:0};
+  if(isTrueMixedFlat(l))return `0° ${d.rotation0} / 90° ${d.rotation90}`;
+  return l.swapText||"原方向";
+}
 function displayGridCounts(l){const boxes=Array.isArray(l.boxes)?l.boxes:[];if(!boxes.length)return l.counts;const uniqueCount=key=>new Set(boxes.map(box=>Math.round(Number(box[key])*1000)/1000)).size;return[uniqueCount("x"),uniqueCount("y"),uniqueCount("z")]}
 function layoutSummary(l){return isTrueMixedFlat(l)?`每层 ${l.counts[0]} × ${l.counts[2]}层 = ${l.quantity}`:`${displayGridCounts(l).join("×")}=${l.quantity}`}
 function planLayoutSummary(l){const counts=displayGridCounts(l);return isTrueMixedFlat(l)?layoutSummary(l):`长方向 ${counts[0]} × 宽方向 ${counts[1]} × 高方向 ${counts[2]} = ${l.quantity}`}
@@ -1273,7 +1303,7 @@ function paddingPackingSummary(l){
   const base=`底面积利用率 ${((l.areaUtilization||0)*100).toFixed(2)}%`;
   const evalText=l.evaluation?` · 最小方向余量 ${l.evaluation.clearance.minAxis}mm${isTrueMixedFlat(l)?` · 内部缺口 ${(l.evaluation.footprint.internalGapRatio*100).toFixed(1)}%`:""}`:"";
   if(isTrueMixedFlat(l))return`${base} · ${orientationSummary(l)} · 较统一 ${l.improvement>0?`+${l.improvement}`:l.improvement||0}个${evalText}`;
-  const counts=displayGridCounts(l);return`${base} · 统一朝向平放 ${l.quantity}个 长${counts[0]}*宽${counts[1]}*高${counts[2]}${evalText}`
+  const counts=displayGridCounts(l);return`${base} · ${modeText(l)} ${l.quantity}个 长${counts[0]}*宽${counts[1]}*高${counts[2]}${evalText}`
 }
 function planCard(item,i,selectedKey){
   const c=item.carton,l=item.layout,e=item.ergonomics;

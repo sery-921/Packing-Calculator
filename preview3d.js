@@ -324,16 +324,24 @@ function foamGeometryFor(face, productDims, cartonInner, gap) {
   const [innerL, innerW, innerH] = cartonInner;
   const dims = face.dims || [];
   const t = Math.max(Number(dims[2]) || 8, 3);
-  const fitL = Math.min(dims[0] || L, innerL);
-  const fitW = Math.min(dims[0] || W, innerW);
-  const fitH = Math.min(dims[1] || H, innerH);
-  const fitTopW = Math.min(dims[1] || W, innerW);
-  if (face.key === "top") return { size: [fitL, t, fitTopW], pos: [0, H / 2 + gap + t / 2, 0] };
-  if (face.key === "bottom") return { size: [fitL, t, fitTopW], pos: [0, -H / 2 - gap - t / 2, 0] };
-  if (face.key === "left") return { size: [t, fitH, fitW], pos: [-L / 2 - gap - t / 2, 0, 0] };
-  if (face.key === "right") return { size: [t, fitH, fitW], pos: [L / 2 + gap + t / 2, 0, 0] };
-  if (face.key === "front") return { size: [fitL, fitH, t], pos: [0, 0, W / 2 + gap + t / 2] };
-  return { size: [fitL, fitH, t], pos: [0, 0, -W / 2 - gap - t / 2] };
+  const sheetA = Number(dims[0]) || 0;
+  const sheetB = Number(dims[1]) || 0;
+  const swapFor = (a, b) => sheetA > 0 && sheetB > 0 && sheetA !== sheetB && a !== b && ((sheetA > sheetB) !== (a > b));
+  const topSwap = swapFor(L, W);
+  const sideSwap = swapFor(W, H);
+  const frontSwap = swapFor(L, H);
+  const topL = Math.min(topSwap ? sheetB || L : sheetA || L, innerL);
+  const topW = Math.min(topSwap ? sheetA || W : sheetB || W, innerW);
+  const sideW = Math.min(sideSwap ? sheetB || W : sheetA || W, innerW);
+  const sideH = Math.min(sideSwap ? sheetA || H : sheetB || H, innerH);
+  const frontL = Math.min(frontSwap ? sheetB || L : sheetA || L, innerL);
+  const frontH = Math.min(frontSwap ? sheetA || H : sheetB || H, innerH);
+  if (face.key === "top") return { size: [topL, t, topW], pos: [0, H / 2 + gap + t / 2, 0] };
+  if (face.key === "bottom") return { size: [topL, t, topW], pos: [0, -H / 2 - gap - t / 2, 0] };
+  if (face.key === "left") return { size: [t, sideH, sideW], pos: [-L / 2 - gap - t / 2, 0, 0] };
+  if (face.key === "right") return { size: [t, sideH, sideW], pos: [L / 2 + gap + t / 2, 0, 0] };
+  if (face.key === "front") return { size: [frontL, frontH, t], pos: [0, 0, W / 2 + gap + t / 2] };
+  return { size: [frontL, frontH, t], pos: [0, 0, -W / 2 - gap - t / 2] };
 }
 
 function addFoams(group, data, productDims, materials, cartonBounds) {
@@ -371,6 +379,7 @@ function formulaText(data) {
   const layout = data.best.layout;
   const d = layout.orientationDistribution || { rotation0: 0, rotation90: 0 };
   const isTrueMixedFlat = layout.mode === "mixedOrientationFlat" && Number(d.rotation0) > 0 && Number(d.rotation90) > 0;
+  const orientationText = layout.orientationText || layout.posture || "平放";
   const gridCounts = () => {
     const boxes = Array.isArray(layout.boxes) ? layout.boxes : [];
     if (!boxes.length) return layout.counts.map(Number);
@@ -381,7 +390,7 @@ function formulaText(data) {
     return `装配方案: 平放混排 ${layout.quantity} pcs · 0° ${d.rotation0} / 90° ${d.rotation90}`;
   }
   const [nx, ny, nz] = gridCounts();
-  return `装配方案: 统一朝向平放 ${layout.quantity} pcs 长${nx}*宽${ny}*高${nz}`;
+  return `装配方案: 统一朝向${orientationText} ${layout.quantity} pcs 长${nx}*宽${ny}*高${nz}`;
 }
 
 function layoutProductDims(layout) {
