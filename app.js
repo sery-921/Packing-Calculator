@@ -1313,7 +1313,16 @@ function planCard(item,i,selectedKey){
     return`<button class="plan-card ${planKey(item)===selectedKey?"selected":""}" data-plan="${i}"><strong>${i+1}. ${esc(l.kit.label)} · ${l.counts.join("×")} = ${l.quantity}个</strong><span>${esc(c.name)} · 单格 ${l.kit.cell.join("×")} mm · ${knifeCardSummary(l)}</span><em>体积 ${(l.utilization*100).toFixed(2)}% · 平卡 ${l.flatCardCount}片 · 余量 ${l.residual.join("×")}mm · 不放珍珠棉 · ${risk}${notes}</em></button>`;
   }
   const foam=c.has_existing_foam?"配套珍珠棉":"无原表棉",risk=e.passed?"人体工学通过":"超建议需确认",improve=l.improvement>0?` · 较统一 +${l.improvement}`:"",tags=evaluationTags(l),tagLine=tags?`<span class="plan-card-tags">${tags}</span>`:"";
-  return`<button class="plan-card ${planKey(item)===selectedKey?"selected":""}" data-plan="${i}"><strong>${i+1}. ${esc(c.code&&c.code!=="*" ? c.code : c.sku||"箱型")} · ${modeText(l)} · ${planLayoutSummary(l)}个</strong><span>${esc(c.name)} · 内尺寸 ${c.inner.join("×")} mm</span>${tagLine}<em>体积 ${(l.utilization*100).toFixed(2)}% · 底面 ${((l.areaUtilization||0)*100).toFixed(2)}% · ${orientationSummary(l)} · 余量 ${l.residual.join("×")}mm${improve} · ${evaluationSummary(l)} · ${foam} · ${risk}</em></button>`;
+  const base=(l.baseDims||[]).map(Number).join("×");
+  const placed=(l.orientation||[]).map(Number).join("×");
+  const posture=l.posture||"平放";
+  let orientationMode=modeText(l),orientationDetail=orientationSummary(l);
+  if(!isTrueMixedFlat(l)&&base&&placed){
+    if(base===placed){orientationMode="统一朝向平放";orientationDetail=placed;}
+    else if(posture==="平放"){orientationMode="统一朝向平放";orientationDetail=`${base} （${l.swapText||"内盒长宽互换"}）`;}
+    else{orientationMode=`统一朝向（高向变成 ${(l.orientation||[]).map(Number)[2]}）`;orientationDetail=`${base} → ${placed}`;}
+  }
+  return`<button class="plan-card ${planKey(item)===selectedKey?"selected":""}" data-plan="${i}"><strong>${i+1}. ${esc(c.code&&c.code!=="*" ? c.code : c.sku||"箱型")} · ${orientationMode} · ${planLayoutSummary(l)}个</strong><span>${esc(c.name)} · 内尺寸 ${c.inner.join("×")} mm</span>${tagLine}<em>体积 ${(l.utilization*100).toFixed(2)}% · 底面 ${((l.areaUtilization||0)*100).toFixed(2)}% · ${orientationDetail} · 余量 ${l.residual.join("×")}mm${improve} · ${evaluationSummary(l)} · ${foam} · ${risk}</em></button>`;
 }
 function renderPlanList(previewData,selectedKey){
   const plans=previewData.comparisonPlans;
