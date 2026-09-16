@@ -1312,7 +1312,13 @@ function paddingPackingSummary(l){
   const base=`底面积利用率 ${((l.areaUtilization||0)*100).toFixed(2)}%`;
   const evalText=l.evaluation?` · 最小方向余量 ${l.evaluation.clearance.minAxis}mm${isTrueMixedFlat(l)?` · 内部缺口 ${(l.evaluation.footprint.internalGapRatio*100).toFixed(1)}%`:""}`:"";
   if(isTrueMixedFlat(l))return`${base} · ${orientationSummary(l)} · 较统一 ${l.improvement>0?`+${l.improvement}`:l.improvement||0}个${evalText}`;
-  const counts=displayGridCounts(l);return`${base} · ${modeText(l)} ${l.quantity}个 长${counts[0]}*宽${counts[1]}*高${counts[2]}${evalText}`
+  const counts=displayGridCounts(l);
+  const dims=(l.baseDims||[]).map(Number).join("×");
+  const placed=(l.orientation||[]).map(Number).join("×");
+  const posture=l.posture||"平放";
+  let orientationMode=modeText(l);
+  if(dims&&placed&&dims!==placed&&posture!=="平放")orientationMode=`统一朝向（高向变成 ${(l.orientation||[]).map(Number)[2]}）`;
+  return`${base} · ${orientationMode} · ${l.quantity}个 长${counts[0]}*宽${counts[1]}*高${counts[2]}${evalText}`
 }
 function planCard(item,i,selectedKey){
   const c=item.carton,l=item.layout,e=item.ergonomics;
@@ -1394,7 +1400,7 @@ function render(data,resetPlanDisclosure=false){
   $("foamTotal").textContent=`${l.foamTotal} 片`;
   renderEngineeringPreview(previewData);
   renderPdfPreview(previewData);
-  $("paddingTable").innerHTML=[["长方向",p.length,"左","右",codeText(c,"length")],["宽方向",p.width,"前","后",codeText(c,"width")],["高方向",p.height,"下","上",codeText(c,"height")],[paddingModeAxis(l),null,"","",paddingPackingSummary(l)]].map(([axis,x,a,b,code])=>x?`<div class="padding-row"><strong>${axis}</strong><span>余量 ${x.margin}mm · ${a}${x.low}片 / ${b}${x.high}片 ${code}</span><em>未填 ${x.unfilled}mm</em></div>`:`<div class="padding-row"><strong>${axis}</strong><span>${code}</span><em>${modeText(l)}</em></div>`).join("");
+  $("paddingTable").innerHTML=[["长方向",p.length,"左","右",codeText(c,"length")],["宽方向",p.width,"前","后",codeText(c,"width")],["高方向",p.height,"下","上",codeText(c,"height")],[paddingModeAxis(l),null,"","",paddingPackingSummary(l)]].map(([axis,x,a,b,code])=>x?`<div class="padding-row"><strong>${axis}</strong><span>余量 ${x.margin}mm · ${a}${x.low}片 / ${b}${x.high}片 ${code}</span><em>未填 ${x.unfilled}mm</em></div>`:`<div class="padding-row"><strong>${axis}</strong><span>${code}</span><em>${orientationMode}</em></div>`).join("");
   renderPlanList(previewData,selectedKey);
   $("results").scrollIntoView({behavior:"smooth",block:"start"});
 }
