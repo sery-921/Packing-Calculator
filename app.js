@@ -973,12 +973,21 @@ pdfLine(`每格产品数：${l.units||1} 件${(l.units||1)>1?"（"+l.arrangement
     pdfLine(`六面余量：长 ${l.residual[0]} mm，宽 ${l.residual[1]} mm，高 ${l.residual[2]} mm`)
   ];
   const grid=layerGridInfo(l),hasMixed=d.rotation0>0&&d.rotation90>0;
+  const base=(l.baseDims||[]).map(Number).join("×");
+  const placedDims=(l.orientation||[]).map(Number).join("×");
+  const posture=l.posture||"平放";
+  let modeText=`统一朝向${l.orientationText||orientationTextFor(l.baseDims,l.orientation)}`,sizeText=`${l.orientation.join(" × ")} mm · ${l.orientationText||orientationTextFor(l.baseDims,l.orientation)}`;
+  if(!isTrueMixedFlat(l)&&base&&placedDims){
+    if(base===placedDims){modeText="统一朝向平放";sizeText=`${base} mm`;}
+    else if(posture==="平放"){modeText="统一朝向平放";sizeText=`${base} mm （内盒长宽互换）`;}
+    else{modeText=`统一朝向（高向变成 ${(l.orientation||[]).map(Number)[2]}）`;sizeText=`${base} mm → ${placedDims} mm`;}
+  }
   const lines=[
     pdfLine("包装装箱优化方案"),
     pdfLine(`外箱：${cartonPrimaryText(c)}（内尺寸 ${c.inner.join(" × ")} mm）`,true),
     pdfLine(`箱型信息：SKU ${c.sku||"-"} / 编码 ${c.code||"-"} / 材质 ${c.material||c.flute}`),
     pdfLine(c.has_existing_foam?`原表配套珍珠棉：${c.foam_note||"有配套珍珠棉备注"}`:"原表配套珍珠棉：无"),
-    pdfLine(`内盒尺寸：${l.orientation.join(" × ")} mm · ${l.orientationText||orientationTextFor(l.baseDims,l.orientation)}`)
+    pdfLine(`内盒尺寸：${sizeText}`)
   ];
   if(hasMixed){
     lines.push(
@@ -988,7 +997,7 @@ pdfLine(`每格产品数：${l.units||1} 件${(l.units||1)>1?"（"+l.arrangement
     );
   }else{
     lines.push(
-      pdfLine(`装箱模式：统一朝向${l.orientationText||orientationTextFor(l.baseDims,l.orientation)}`,true),
+      pdfLine(`装箱模式：${modeText}`,true),
       pdfLine(`排列方式：长方向 ${grid.lengthCount} × 宽方向 ${grid.widthCount} × 高方向 ${grid.layers} = ${l.quantity} 个/箱`,true)
     );
   }
