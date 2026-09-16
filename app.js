@@ -1379,7 +1379,16 @@ function render(data,resetPlanDisclosure=false){
   $("results").hidden=false;
   const _re=$("resultsEmpty");if(_re)_re.hidden=true;
   $("countGrid").textContent=layoutSummary(l);$("quantity").textContent=l.quantity;
-  $("orientationText").textContent=`${modeText(l)} · ${orientationSummary(l)} · ${c.name}`;
+  const base=(l.baseDims||[]).map(Number).join("×");
+  const placed=(l.orientation||[]).map(Number).join("×");
+  const posture=l.posture||"平放";
+  let orientationMode=modeText(l),orientationDetail=orientationSummary(l);
+  if(!isTrueMixedFlat(l)&&base&&placed){
+    if(base===placed){orientationMode="统一朝向平放";orientationDetail=placed;}
+    else if(posture==="平放"){orientationMode="统一朝向平放";orientationDetail=`${base} （${l.swapText||"内盒长宽互换"}）`;}
+    else{orientationMode=`统一朝向（高向变成 ${(l.orientation||[]).map(Number)[2]}）`;orientationDetail=`${base} → ${placed}`;}
+  }
+  $("orientationText").textContent=`${orientationMode} · ${orientationDetail} · ${c.name}`;
   $("utilization").textContent=`${(l.utilization*100).toFixed(2)}%`;
   $("totalWeight").textContent=`${l.totalWeight.toFixed(2)} kg${previewData.best.ergonomics&&!previewData.best.ergonomics.passed?" · 超建议":""}`;
   $("foamTotal").textContent=`${l.foamTotal} 片`;
