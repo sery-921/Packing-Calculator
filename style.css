@@ -39,6 +39,22 @@ input[readonly]{background:#eef4f0;color:#36566b;border-color:#cfe3dc}
 .bw-axis-seg{grid-template-columns:1fr 1fr}
 #bwSheetWidth{width:100%;height:46px;border:1px solid var(--line);background:white;border-radius:10px;padding:0 12px;font:inherit;font-size:16px;color:var(--ink);outline:none}
 #bwSheetWidth:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(44,115,185,.12)}
+.bw-param-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px}
+.bw-stepper-grid{grid-template-columns:repeat(3,minmax(96px,1fr));gap:14px;max-width:none}
+.bw-param-row .bw-stepper-grid{margin-bottom:0}
+.bw-field{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:700}
+.bw-field label{display:block;width:100%;text-align:center}
+.bw-stepper{display:grid;grid-template-columns:32px minmax(0,1fr) 32px;align-items:center;gap:4px;border:1px solid #cbd5dd;background:#fff;border-radius:10px;padding:4px}
+.bw-stepper input{width:100%;height:46px;border:1px solid var(--line);background:white;border-radius:10px;padding:0 12px;font:inherit;font-size:16px;color:var(--ink);outline:none;text-align:center}
+.bw-stepper input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(44,115,185,.12)}
+.bw-step-btn{width:32px;height:32px;border:1px solid var(--line);background:white;border-radius:8px;font-size:15px;font-weight:700;color:var(--ink);cursor:pointer}
+.bw-step-btn:hover{background:#f6f8f9}
+.bw-step-btn:active{transform:translateY(1px)}
+.bw-stepper input::-webkit-outer-spin-button,.bw-stepper input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.bw-stepper input[type=number]{-moz-appearance:textfield;appearance:textfield}
+.bw-formula-hint{margin-left:auto;min-width:78px;padding:6px 8px;border:1px solid #cfe3dc;border-radius:8px;background:#eefaf6;color:#1f6b55;font-size:11px;line-height:1.35;text-align:center}
+.bw-formula-hint span{display:block;font-weight:700}
+.bw-formula-hint strong{display:block;margin-top:2px;font-size:12px}
 .bw-folddir-note{margin:6px 0 0;padding:8px 12px;border-left:3px solid var(--green);border-radius:8px;background:#eefaf6;color:#1f6b55;font-size:12px;line-height:1.5}
 .bw-folddir-field{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .bw-folddir-field .bw-folddir-label{font-size:13px;font-weight:700;color:#36566b}

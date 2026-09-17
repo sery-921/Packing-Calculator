@@ -155,6 +155,16 @@ function toggleConfirm() {
 }
 
 function init() {
+ document.querySelectorAll(".bw-step-btn").forEach(btn => btn.addEventListener("click", () => {
+   const input = document.getElementById(btn.dataset.target);
+   if (!input) return;
+   const step = Number(btn.dataset.step) || 0;
+   const min = input.min ? Number(input.min) : 0;
+   const current = Number(input.value) || 0;
+   const next = Math.max(min, current + step);
+   input.value = String(next);
+   input.dispatchEvent(new Event("input", { bubbles: true }));
+ }));
  const toggle = $("bubbleWrapToggle");
  const body = $("bubbleWrapBody");
  toggle?.addEventListener("change", () => {

@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#17324d">
   <title>包装装箱优化器</title>
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="style.css?v=13">
+  <link rel="stylesheet" href="style.css?v=14">
 </head>
 <body>
   <header>
@@ -33,10 +33,30 @@
            <label><input type="radio" name="bwAxis" value="length" checked><span>裹长向</span></label>
            <label><input type="radio" name="bwAxis" value="width"><span>裹宽向</span></label>
          </div>
-           <div class="dimension-grid compact">
-             <label>料宽<select id="bwSheetWidth"><option value="375" selected>375</option><option value="750">750</option></select></label>
-             <label>圈数 n<input id="bwTurns" type="number" min="0" step="1" value="2"></label>
-             <label>对折 k<input id="bwFolds" type="number" min="0" step="1" value="0"></label>
+           <div class="bw-param-row">
+             <div class="dimension-grid compact bw-stepper-grid">
+               <label>料宽<select id="bwSheetWidth"><option value="375" selected>375</option><option value="750">750</option></select></label>
+               <div class="bw-field">
+                 <label for="bwTurns">圈数 n</label>
+                 <div class="bw-stepper">
+                   <button type="button" class="bw-step-btn" data-target="bwTurns" data-step="-1" aria-label="减少">−</button>
+                   <input id="bwTurns" type="number" min="0" step="1" value="2">
+                   <button type="button" class="bw-step-btn" data-target="bwTurns" data-step="1" aria-label="增加">+</button>
+                 </div>
+               </div>
+               <div class="bw-field">
+                 <label for="bwFolds">对折次数 k</label>
+                 <div class="bw-stepper">
+                   <button type="button" class="bw-step-btn" data-target="bwFolds" data-step="-1" aria-label="减少">−</button>
+                   <input id="bwFolds" type="number" min="0" step="1" value="0">
+                   <button type="button" class="bw-step-btn" data-target="bwFolds" data-step="1" aria-label="增加">+</button>
+                 </div>
+               </div>
+             </div>
+             <div class="bw-formula-hint" title="高向增量公式">
+               <span>高向增量</span>
+               <strong>+4×n×k</strong>
+             </div>
            </div>
            <p class="bw-folddir-note">对折料恒叠到顶面 → 高方向额外 +4×圈数×对折次数</p>
          </div>
@@ -208,7 +228,7 @@
  <script src="packing-evaluator.js?v=3"></script>
  <script src="mixed-packing.js?v=2"></script>
   <script src="app.js?v=24"></script>
-<script src="bubble-wrap.js?v=3"></script>
+<script src="bubble-wrap.js?v=4"></script>
  <script src="inner-box-recommender.js?v=5"></script>
 </body>
 </html>
