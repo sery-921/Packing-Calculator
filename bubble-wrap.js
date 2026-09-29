@@ -68,15 +68,21 @@ function maxFolds() {
   function compute(dims, axis, turns, folds, foldDir, sheetWidth) {
     const inc = [0, 0, 0];
     const perp = [0, 1, 2].filter(i => i !== axis);
-   perp.forEach(i => { inc[i] = PER_TURN * turns; });
-   // 对折料恒落到高方向(2)；裹高向时高即裹向，对折仍叠加到高
-   const foldAxis = 2;
-   inc[foldAxis] += PER_TURN * turns * folds;
+    perp.forEach(i => { inc[i] = PER_TURN * turns; });
+    // 对折翻边：余料从裹向端部折回，U 形翻边层数 (n+1)×2^k，按 5mm 档严格向上进位
+    const foldLipTheory = folds > 0 ? LAYER_MM * (turns + 1) * Math.pow(2, folds) : 0;
+    const foldLipInc = folds > 0 ? Math.floor(foldLipTheory / 5) * 5 + 5 : 0;
+    inc[axis] += foldLipInc;
+    // 折回料叠到顶面：高方向平铺叠层；裹高向时与翻边同向，仍叠加到高
+    const foldAxis = 2;
+    inc[foldAxis] += PER_TURN * turns * folds;
     const wrapped = dims.map((d, i) => round(d + inc[i], 2));
     const usage = (dims[perp[0]] + dims[perp[1]]) * 2 * turns;
     const foldFeasible = sheetWidth >= (folds + 1) * dims[axis];
     return {
       dims, axis, turns, folds, foldAxis, sheetWidth,
+      foldLipTheory: round(foldLipTheory, 1),
+      foldLipInc: round(foldLipInc, 1),
       increments: inc.map(v => round(v, 2)),
       wrapped,
       usage_mm: round(usage, 1),
@@ -96,7 +102,7 @@ function describe() {
     const turns = num("bwTurns");
     const folds = num("bwFolds") || 0;
     const dims = [L, W, H];
-    // 对折料恒落到高方向（顶面），与裹向无关
+    // 折回料叠到顶面（高）；端部翻边增量在 compute 内计入裹向
     const foldDir = 2;
     if (turns <= 0) return null;
     return compute(dims, axis, turns, folds, foldDir, sheetWidth);
@@ -111,19 +117,34 @@ function describe() {
   const raw = $("bwRawDims");
   if (raw) raw.textContent = `裹前尺寸 ${rawL} × ${rawW} × ${rawH} mm（取自下方，如需更改请在下方产品长 L、宽 W、高 H 处执行修改）`;
    const r = describe();
-   if (!r) { box.hidden = true; return; }
+   const foldsInput = $("bwFolds");
+   const foldsWarn = $("bwFoldsWarn");
+   if (!r) {
+     box.hidden = true;
+     foldsInput?.classList.remove("bw-input-warn");
+     if (foldsWarn) foldsWarn.hidden = true;
+     return;
+   }
     box.hidden = false;
     const incText = r.increments.map((v, i) => `${LABEL[i]} +${v}mm`).join(" · ");
-    const foldWarn = r.folds > 0 && !r.foldFeasible
-      ? `<span class="bw-warn">对折不可行：料宽 ${r.sheetWidth}mm < ${(r.folds + 1) * r.dims[r.axis]}mm（需 ≥ ${(r.folds + 1)}×裹向尺寸）</span>`
+    // 对折上限固定提示：文案只随料宽/裹向尺寸变化，不随当前 k 变化，避免误导
+    const maxK = Math.max(0, Math.floor(r.sheetWidth / r.dims[r.axis]) - 1);
+    const foldWarnText = `对折不可行：料宽 ${r.sheetWidth}mm，裹向尺寸 ${r.dims[r.axis]}mm，最多可对折 ${maxK} 次`;
+    const foldWarn = !r.foldFeasible
+      ? `<span class="bw-warn">${foldWarnText}</span>`
       : "";
+    foldsInput?.classList.toggle("bw-input-warn", !r.foldFeasible);
+    if (foldsWarn) {
+      foldsWarn.hidden = r.foldFeasible;
+      foldsWarn.textContent = foldWarnText;
+    }
     const foldInfo = r.folds > 0
-      ? `<span class="bw-fold">对折 ${r.folds} 次 → ${LABEL[r.foldAxis]} 额外 +${(PER_TURN * r.turns * r.folds).toFixed(1)}mm</span>`
+      ? `<span class="bw-fold">对折 ${r.folds} 次 → ${LABEL[r.axis]} 端部翻边 +${r.foldLipInc}mm（理论 ≥${r.foldLipTheory}mm，按5mm档进位）· ${LABEL[r.foldAxis]} 额外 +${(PER_TURN * r.turns * r.folds).toFixed(1)}mm</span>`
       : "";
     box.innerHTML = `
       <div class="bw-row"><span>裹后尺寸</span><strong>${r.wrapped.join(" × ")} mm</strong></div>
       <div class="bw-row"><span>各方向增量</span><em>${incText}</em></div>
-      <div class="bw-row"><span>裹向 / 对折料</span><em>${LABEL[r.axis]} 不变 · 对折料落到顶面（高）</em></div>
+      <div class="bw-row"><span>裹向 / 对折料</span><em>${LABEL[r.axis]} 端部翻边增厚 · 折回料叠到顶面（高）</em></div>
       ${foldInfo ? `<div class="bw-row">${foldInfo}</div>` : ""}
       ${foldWarn ? `<div class="bw-row">${foldWarn}</div>` : ""}
       <div class="bw-row bw-usage"><span>气泡片用量</span><strong>${r.usage_mm} mm (${r.usage_m} m)</strong></div>

@@ -56,6 +56,11 @@ input[readonly]{background:#eef4f0;color:#36566b;border-color:#cfe3dc}
 .bw-formula-hint span{display:block;font-weight:700}
 .bw-formula-hint strong{display:block;margin-top:2px;font-size:12px}
 .bw-folddir-note{margin:6px 0 0;padding:8px 12px;border-left:3px solid var(--green);border-radius:8px;background:#eefaf6;color:#1f6b55;font-size:12px;line-height:1.5}
+.bw-stepper input.bw-input-warn{border-color:#d9a400;background:#fff8e1}
+.bw-stepper input.bw-input-warn:focus{border-color:#b58900;box-shadow:0 0 0 3px rgba(217,164,0,.15)}
+.bw-folds-warn{display:flex;align-items:flex-start;gap:8px;margin:8px 0 0;padding:8px 12px;border:1px solid #e6c46a;border-left:4px solid #d9a400;border-radius:8px;background:#fff8e1;color:#8a5a00;font-size:12px;font-weight:700;line-height:1.5}
+.bw-folds-warn[hidden]{display:none}
+.bw-folds-warn::before{content:"";width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:10px solid #d9a400;flex:0 0 auto;margin-top:3px}
 .bw-folddir-field{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .bw-folddir-field .bw-folddir-label{font-size:13px;font-weight:700;color:#36566b}
 .bw-folddir-field label{position:relative;flex:0 0 auto}
