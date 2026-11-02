@@ -71,7 +71,7 @@ window.COMMON_CARTONS = [
     "wall_thickness_mm": 6,
     "board_mass_kg_m2": 0.95,
     "has_existing_foam": true,
-    "foam_note": "327141989-327141989+纸板327122433",
+    "foam_note": "四周泡棉是327141989，上下是327141990（尺寸见系统）",
     "reason": "reTerminal DM",
     "logo": false,
     "no_logo": true,
