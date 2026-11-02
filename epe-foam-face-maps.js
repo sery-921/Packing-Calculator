@@ -985,13 +985,9 @@ window.EPE_FOAM_FACE_MAPS = {
           "face_label": "上/下",
           "face_key": "top_bottom",
           "axis": "height",
-          "sku": "327141989",
-          "dimensions_mm": [
-            324,
-            240,
-            10
-          ],
-          "dimension_key": "324×240×10",
+          "sku": "327141990",
+          "dimensions_mm": null,
+          "dimension_key": "",
           "fits": true,
           "note": "",
           "source_row": 20
@@ -1031,15 +1027,15 @@ window.EPE_FOAM_FACE_MAPS = {
           "face_label": "前/后",
           "face_key": "front_back",
           "axis": "width",
-          "sku": "327122433",
+          "sku": "327141989",
           "dimensions_mm": [
-            255,
-            190,
-            6
+            324,
+            240,
+            10
           ],
-          "dimension_key": "255×190×6",
+          "dimension_key": "324×240×10",
           "fits": true,
-          "note": "厚度6mm，需确认是否作为纸板而非珍珠棉",
+          "note": "",
           "source_row": 22
         }
       },
@@ -1056,13 +1052,9 @@ window.EPE_FOAM_FACE_MAPS = {
           "face_label": "上/下",
           "face_key": "top_bottom",
           "axis": "height",
-          "sku": "327141989",
-          "dimensions_mm": [
-            324,
-            240,
-            10
-          ],
-          "dimension_key": "324×240×10",
+          "sku": "327141990",
+          "dimensions_mm": null,
+          "dimension_key": "",
           "fits": true,
           "note": "",
           "source_row": 20
@@ -1102,21 +1094,21 @@ window.EPE_FOAM_FACE_MAPS = {
           "face_label": "前/后",
           "face_key": "front_back",
           "axis": "width",
-          "sku": "327122433",
+          "sku": "327141989",
           "dimensions_mm": [
-            255,
-            190,
-            6
+            324,
+            240,
+            10
           ],
-          "dimension_key": "255×190×6",
+          "dimension_key": "324×240×10",
           "fits": true,
-          "note": "厚度6mm，需确认是否作为纸板而非珍珠棉",
+          "note": "",
           "source_row": 22
         }
       },
       "skus": [
         "327141989",
-        "327122433"
+        "327141990"
       ],
       "source_workbook": "珍珠棉 对应 纸箱 final.xlsx",
       "source_sheet": "face_map_with_carton_sku"

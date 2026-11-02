@@ -744,7 +744,8 @@ function foamSkuSize(sku){
 }
 function foamAxisSize(c,axis,sku){
   const rec=foamAxisRecord(c,axis);
-  return rec&&rec.dimension_key?rec.dimension_key:foamSkuSize(sku);
+  const size=rec&&rec.dimension_key?rec.dimension_key:foamSkuSize(sku);
+  return size||"见系统";
 }
 function codeText(c,axis){
   const rec=foamAxisRecord(c,axis),code=(rec&&rec.sku)||foamCodes(c)[axis];
@@ -1062,9 +1063,9 @@ function drawMixedDrawing(ctx,data,x,y,w,h){
     ctx.fillStyle="#34495e";ctx.font='18px "Microsoft YaHei",sans-serif';
     lines.forEach((line,i)=>wrapCanvasText(ctx,line,legendX,ly+30+i*24,legendW,22));
   };
-  legend("左/右珍珠棉",[`${p.length.low} / ${p.length.high} 片`,`${foamSpec(c,"length").code}`,`${foamSpec(c,"length").size} mm`],oy+8);
-  legend("前/后珍珠棉",[`${p.width.low} / ${p.width.high} 片`,`${foamSpec(c,"width").code}`,`${foamSpec(c,"width").size} mm`],oy+146);
-  legend("下/上珍珠棉",[`${p.height.low} / ${p.height.high} 片`,`${foamSpec(c,"height").code}`,`${foamSpec(c,"height").size} mm`],y+h*.56);
+  legend("左/右珍珠棉",[`${p.length.low} / ${p.length.high} 片`,`${foamSpec(c,"length").code}`,`${foamSpec(c,"length").size==="见系统"?"见系统":foamSpec(c,"length").size+" mm"}`],oy+8);
+  legend("前/后珍珠棉",[`${p.width.low} / ${p.width.high} 片`,`${foamSpec(c,"width").code}`,`${foamSpec(c,"width").size==="见系统"?"见系统":foamSpec(c,"width").size+" mm"}`],oy+146);
+  legend("下/上珍珠棉",[`${p.height.low} / ${p.height.high} 片`,`${foamSpec(c,"height").code}`,`${foamSpec(c,"height").size==="见系统"?"见系统":foamSpec(c,"height").size+" mm"}`],y+h*.56);
   ctx.restore();
 }
 function drawKnifeDrawing(ctx,data,x,y,w,h){
@@ -1103,7 +1104,7 @@ function drawDrawing(ctx,data,x,y,w,h){
     ctx.fillStyle="#34495e";ctx.font='21px "Microsoft YaHei",sans-serif';
     ctx.fillText(`片数：${countText}`,legendX,ly+34);
     wrapCanvasText(ctx,`SKU：${spec.code}`,legendX,ly+66,legendW,29);
-    wrapCanvasText(ctx,`尺寸：${spec.size} mm`,legendX,ly+96,legendW,29);
+    wrapCanvasText(ctx,`尺寸：${spec.size==="见系统"?"见系统":spec.size+" mm"}`,legendX,ly+96,legendW,29);
   };
   ctx.font='16px "Microsoft YaHei",sans-serif';ctx.fillStyle="#1f3c56";ctx.fillText("俯视图",ox,oy-12);rect(ox,oy,cl*scale,cw*scale,null);
   const x0=ox+(p.length.lowStack+p.length.unfilled/2)*scale,y0=oy+(p.width.lowStack+p.width.unfilled/2)*scale;
